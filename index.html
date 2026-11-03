@@ -67,14 +67,21 @@
   .map{margin:14px 0 4px}
   .map svg{display:block;width:100%;height:auto;overflow:visible}
   .hex{cursor:pointer;fill:var(--pending);stroke:#fff;stroke-width:5;transition:fill .4s ease}
-  .hex:focus{outline:none}
-  .st.sel .hex,.st:focus-visible .hex{stroke:var(--ink);stroke-width:8}
+  .hex:focus,.st:focus{outline:none}
+  .outline{fill:none;stroke:#fff;stroke-width:5;pointer-events:none}
+  .st.sel .outline,.st:focus-visible .outline{stroke:var(--ink);stroke-width:8}
+  .stripes{pointer-events:none}
+  .stripes .sep{stroke:#fff;stroke-width:1.5;opacity:.55}
+  .num{font-family:var(--font);font-size:24px;font-weight:700;text-anchor:middle;dominant-baseline:central;pointer-events:none;fill:#fff;
+    paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:5px}
+  .st.house .lab{paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:6px;fill:#fff}
   .lab{font-family:var(--font);font-size:36px;font-weight:700;text-anchor:middle;dominant-baseline:central;pointer-events:none;fill:#fff}
   .lab.dark{fill:#4a4a4a} .lab.faint{fill:#c9c9c9;font-weight:400}
   /* État sans élection pour ce poste : hexagone vide en pointillés, non cliquable */
   .st.none .hex{fill:var(--norace)!important;stroke:var(--norace-line);stroke-width:3;stroke-dasharray:10 8;cursor:default}
   .st.none{cursor:default}
-  @media (max-width:600px){ .lab{font-size:46px} .side .n{font-size:30px} h1{font-size:22px} }
+  .st.none .outline{display:none}
+  @media (max-width:600px){ .lab{font-size:46px} .num{font-size:30px} .side .n{font-size:30px} h1{font-size:22px} }
 
   .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);justify-content:center;margin:6px 0 10px}
   .legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:4px;vertical-align:-1px}
@@ -170,8 +177,8 @@
       pending: "Pas encore de résultats.",
       hint: "Touchez ou survolez un État pour voir les résultats.",
       winner: "Élu",
-      houseDetail: function(d,r,o,t){ return "D " + d + " · R " + r + (o ? " · Autres " + o : "") + " · sur " + t + " sièges"; },
-      houseLead: "Sièges attribués",
+      houseLead: function(t){ return t + (t > 1 ? " sièges dans cet État" : " siège dans cet État"); },
+      elected: "élus", leading2: "en tête", pendingSeats: "Pas encore de résultat",
       source: "Source : ",
       updated: function(t){ return "Mis à jour à " + t; },
       error: "Impossible de charger les résultats pour le moment.",
@@ -197,8 +204,8 @@
       pending: "Noch keine Resultate.",
       hint: "Tippe oder fahre über einen Bundesstaat, um die Resultate zu sehen.",
       winner: "Gewählt",
-      houseDetail: function(d,r,o,t){ return "D " + d + " · R " + r + (o ? " · Andere " + o : "") + " · von " + t + " Sitzen"; },
-      houseLead: "Vergebene Sitze",
+      houseLead: function(t){ return t + (t > 1 ? " Sitze in diesem Bundesstaat" : " Sitz in diesem Bundesstaat"); },
+      elected: "gewählt", leading2: "führend", pendingSeats: "Noch kein Resultat",
       source: "Quelle: ",
       updated: function(t){ return "Aktualisiert um " + t; },
       error: "Die Resultate können im Moment nicht geladen werden.",
@@ -373,7 +380,7 @@
       '<span><i style="background:var(--d)"></i><i style="background:var(--r)"></i>' + L.def + '</span>' +
       '<span><i style="background:var(--d-prov)"></i><i style="background:var(--r-prov)"></i>' + L.prov + '</span>' +
       '<span><i style="background:var(--pending)"></i>' + L.pending + '</span>' +
-      (RACE === "house" ? "" : '<span><i style="background:var(--norace);border:1px dashed var(--norace-line)"></i>' + L.none + '</span>');
+      '<span><i style="background:var(--norace);border:1px dashed var(--norace-line)"></i>' + L.none + '</span>';
     $("detail").innerHTML = '<p class="hint">' + T.hint + '</p>';
   }
 
@@ -382,17 +389,29 @@
     var svg = document.createElementNS(ns, "svg");
     svg.setAttribute("viewBox", "0 0 1625 1020");
     svg.setAttribute("role", "img");
+    var defs = document.createElementNS(ns, "defs"); svg.appendChild(defs);
     TILES.forEach(function(t){
       var g = document.createElementNS(ns, "g");
       g.setAttribute("class", "st"); g.setAttribute("data-st", t.st);
       g.setAttribute("tabindex", "0");
       var p = document.createElementNS(ns, "polygon");
       p.setAttribute("class", "hex"); p.setAttribute("points", hexPoints(t.x, t.y));
+      // Chambre : bandes verticales (une par siège), découpées à la forme de l'hexagone
+      var cp = document.createElementNS(ns, "clipPath"); cp.setAttribute("id", "clip-" + t.st);
+      var cpp = document.createElementNS(ns, "polygon"); cpp.setAttribute("points", hexPoints(t.x, t.y));
+      cp.appendChild(cpp); defs.appendChild(cp);
+      var stripes = document.createElementNS(ns, "g");
+      stripes.setAttribute("class", "stripes"); stripes.setAttribute("clip-path", "url(#clip-" + t.st + ")");
+      var outline = document.createElementNS(ns, "polygon");
+      outline.setAttribute("class", "outline"); outline.setAttribute("points", hexPoints(t.x, t.y));
       var tx = document.createElementNS(ns, "text");
       tx.setAttribute("class", "lab"); tx.setAttribute("x", t.x); tx.setAttribute("y", t.y);
       tx.textContent = t.st;
+      var nb = document.createElementNS(ns, "text");
+      nb.setAttribute("class", "num"); nb.setAttribute("x", t.x); nb.setAttribute("y", t.y + 30);
       var title = document.createElementNS(ns, "title"); title.textContent = stateName(t.st);
-      g.appendChild(title); g.appendChild(p); g.appendChild(tx);
+      g.appendChild(title); g.appendChild(p); g.appendChild(stripes); g.appendChild(outline); g.appendChild(tx); g.appendChild(nb);
+      g._tile = t;
       g.addEventListener("mouseenter", function(){ if (!HOME && matchMedia("(hover:hover)").matches) showDetail(t.st); });
       g.addEventListener("click", function(){ if (!g.classList.contains("none") || RACE !== "house") select(t.st); });
       g.addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === " "){ e.preventDefault(); select(t.st); } });
@@ -417,18 +436,58 @@
                : s.status === "pending" ? "var(--pending)" : "var(--norace)";
       hex.style.fill = fill;
       g.classList.toggle("none", s.status === "none");
-      lab.setAttribute("class", "lab" + (s.status === "pending" ? " dark" : s.status === "none" ? " faint" : ""));
+      lab.setAttribute("class", "lab" + (s.status === "pending" && !s.house ? " dark" : s.status === "none" ? " faint" : ""));
+      drawStripes(g, s.house);
     });
     if (selected) showDetail(selected);
+  }
+
+  // Une bande par siège, dans l'ordre : D élu, D en tête, autres, en attente, R en tête, R élu
+  function drawStripes(g, h){
+    var box = g.querySelector(".stripes"), nb = g.querySelector(".num"), lab = g.querySelector(".lab"), t = g._tile;
+    g.classList.toggle("house", !!h);
+    box.innerHTML = ""; nb.textContent = "";
+    lab.setAttribute("y", h ? t.y - 8 : t.y);
+    if (!h) return;
+    var pend = h.total - h.D - h.Dp - h.R - h.Rp - h.O;
+    var seq = [], push = function(n, col){ for (var i = 0; i < n; i++) seq.push(col); };
+    push(h.D, "var(--d)"); push(h.Dp, "var(--d-prov)"); push(h.O, "var(--o)");
+    push(pend, "var(--pending)"); push(h.Rp, "var(--r-prov)"); push(h.R, "var(--r)");
+    var ns = "http://www.w3.org/2000/svg", x0 = t.x - W, w = 2 * W / seq.length;
+    seq.forEach(function(col, i){
+      var r = document.createElementNS(ns, "rect");
+      r.setAttribute("x", (x0 + i * w).toFixed(2)); r.setAttribute("y", t.y - H2);
+      r.setAttribute("width", (w + 0.6).toFixed(2)); r.setAttribute("height", 2 * H2);
+      r.setAttribute("fill", col); box.appendChild(r);
+      // Séparateurs fins entre sièges, seulement s'ils restent lisibles
+      if (i > 0 && seq.length <= 14) {
+        var l = document.createElementNS(ns, "line");
+        l.setAttribute("x1", (x0 + i * w).toFixed(2)); l.setAttribute("x2", (x0 + i * w).toFixed(2));
+        l.setAttribute("y1", t.y - H2); l.setAttribute("y2", t.y + H2);
+        l.setAttribute("class", "sep"); box.appendChild(l);
+      }
+    });
+    nb.textContent = h.total;
   }
 
   function showDetail(st){
     var s = lastStates[st] || { status: "none" }, html = "<h2>" + stateName(st) + "</h2>";
     if (RACE === "house") {
       if (!s.house) { $("detail").innerHTML = html + '<p class="hint">' + T.pending + "</p>"; return; }
-      var h = s.house;
-      html += '<div class="meta">' + T.houseLead + "</div>";
-      html += '<div class="cand"><span class="nm">' + T.houseDetail(h.D, h.R, h.O, h.total) + "</span></div>";
+      var h = s.house, pend = h.total - h.D - h.Dp - h.R - h.Rp - h.O;
+      html += '<div class="meta">' + T.houseLead(h.total) + "</div>";
+      // Même gabarit que les autres onglets : 3 lignes à hauteur fixe
+      var row = function(label, a, b, colA, colB){
+        var tot = a + b;
+        return '<div class="cand"><span class="nm">' + label + "<small>" + T.elected + " " + a + " · " + T.leading2 + " " + b + "</small></span>" +
+          '<span class="pc">' + tot + "</span>" +
+          '<span class="tr" style="display:flex"><b style="width:' + (a / h.total * 100) + "%;background:" + colA + '"></b>' +
+          '<b style="width:' + (b / h.total * 100) + "%;background:" + colB + '"></b></span></div>';
+      };
+      html += row(T.dem, h.D, h.Dp, "var(--d)", "var(--d-prov)");
+      html += row(T.rep, h.R, h.Rp, "var(--r)", "var(--r-prov)");
+      html += '<div class="cand"><span class="nm">' + T.pendingSeats + (h.O ? "<small>" + T.oth + " " + h.O + "</small>" : "") +
+        '</span><span class="pc">' + pend + '</span><span class="tr"><b style="width:' + (pend / h.total * 100) + '%;background:var(--pending)"></b></span></div>';
       $("detail").innerHTML = html; return;
     }
     if (s.status === "none") { $("detail").innerHTML = html + '<div class="meta"></div><p class="hint">' + T.noRace + "</p>"; return; }
