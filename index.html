@@ -164,6 +164,7 @@
       govTotal: function(n){ return n + " postes de gouverneur en jeu"; },
       legend: { def: "Élu", prov: "En tête", pending: "Pas encore de résultat", none: "Pas d'élection en 2026" },
       reporting: function(p){ return p + " % des votes dépouillés"; },
+      firstVotes: "Premières voix, moins de 1 % dépouillé",
       noRace: "Pas d'élection pour ce poste dans cet État en 2026.",
       pending: "Pas encore de résultats.",
       hint: "Touchez ou survolez un État pour voir les résultats.",
@@ -189,6 +190,7 @@
       govTotal: function(n){ return n + " Gouverneursposten zur Wahl"; },
       legend: { def: "Gewählt", prov: "Führt", pending: "Noch kein Resultat", none: "Keine Wahl 2026" },
       reporting: function(p){ return p + " % der Stimmen ausgezählt"; },
+      firstVotes: "Erste Stimmen, weniger als 1 % ausgezählt",
       noRace: "Keine Wahl für dieses Amt in diesem Bundesstaat 2026.",
       pending: "Noch keine Resultate.",
       hint: "Tippe oder fahre über einen Bundesstaat, um die Resultate zu sehen.",
@@ -265,7 +267,8 @@
     var win = cands.filter(function(c){ return c.winner; })[0];
     var rep = num(race.percent_reporting);
     if (win) return { status: "def", party: partyKey(win.party), cands: cands, reporting: rep, race: race };
-    if (rep > 0 && cands.length && num(cands[0].votes) > 0) return { status: "prov", party: partyKey(cands[0].party), cands: cands, reporting: rep, race: race };
+    // « En tête » dès les premières voix, même si l'API indique encore 0 % dépouillé (ex. villages du New Hampshire à minuit)
+    if (cands.length && num(cands[0].votes) > 0) return { status: "prov", party: partyKey(cands[0].party), cands: cands, reporting: rep, race: race };
     return { status: "pending", cands: cands, reporting: rep, race: race };
   }
 
@@ -398,7 +401,7 @@
     }
     if (s.status === "none") { $("detail").innerHTML = html + '<div class="meta"></div><p class="hint">' + T.noRace + "</p>"; return; }
     var noVotes = !(s.cands || []).some(function(c){ return num(c.votes) > 0; });
-    html += '<div class="meta">' + (noVotes ? T.pending : T.reporting(Math.round(s.reporting || 0))) + "</div>";
+    html += '<div class="meta">' + (noVotes ? T.pending : (Math.round(s.reporting || 0) < 1 ? T.firstVotes : T.reporting(Math.round(s.reporting)))) + "</div>";
     // Toujours 3 lignes (les 3 premiers candidats renvoyés par l'API), complétées par des lignes vides
     var rows = (s.cands || []).slice(0, 3);
     while (rows.length < 3) rows.push(null);
