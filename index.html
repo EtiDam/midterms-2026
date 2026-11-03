@@ -80,12 +80,15 @@
   .layout-home .legend{margin-bottom:4px}
 
   /* Détail d'un État */
-  .detail{border-top:2px solid var(--ink);padding:12px 0 4px;min-height:64px}
-  .detail h2{font-size:18px;margin:0 0 2px;font-weight:800}
-  .detail .meta{font-size:12px;color:var(--muted);margin-bottom:10px}
-  .detail .hint{font-size:14px;color:var(--muted)}
-  .cand{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;margin-bottom:9px;font-size:15px}
-  .cand .nm{font-weight:700}
+  /* Hauteur fixe : le bloc ne change jamais de taille d'un État à l'autre (pas de saut de page ni d'iframe) */
+  .detail{border-top:2px solid var(--ink);padding:12px 0 0;height:190px;overflow:hidden}
+  .detail h2{font-size:18px;line-height:22px;height:22px;margin:0 0 2px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .detail .meta{font-size:12px;line-height:16px;height:16px;color:var(--muted);margin-bottom:10px}
+  .detail .hint{font-size:14px;line-height:20px;color:var(--muted);margin:0}
+  .cand{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;height:34px;margin-bottom:5px;font-size:15px;line-height:20px}
+  .cand.empty{visibility:hidden}
+  .cand .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .cand .pc.na{color:var(--muted);font-weight:400}
   .cand .nm small{font-weight:400;color:var(--muted);font-size:12px;margin-left:4px}
   .cand .pc{font-weight:800;font-variant-numeric:tabular-nums}
   .cand .tr{grid-column:1/-1;height:6px;background:#eee;border-radius:3px;overflow:hidden}
@@ -393,20 +396,20 @@
       html += '<div class="cand"><span class="nm">' + T.houseDetail(h.D, h.R, h.O, h.total) + "</span></div>";
       $("detail").innerHTML = html; return;
     }
-    if (s.status === "none") { $("detail").innerHTML = html + '<p class="hint">' + T.noRace + "</p>"; return; }
-    html += '<div class="meta">' + T.reporting(Math.round(s.reporting || 0)) + "</div>";
-    if (s.status === "pending" && !(s.cands || []).some(function(c){ return num(c.votes) > 0; })) {
-      html += (s.cands || []).map(function(c){
-        return '<div class="cand"><span class="nm">' + esc(c.name) + "<small>" + esc(c.party) + "</small></span><span></span></div>";
-      }).join("") + '<p class="hint">' + T.pending + "</p>";
-    } else {
-      html += (s.cands || []).map(function(c){
-        var k = partyKey(c.party), pc = num(c.percent);
-        return '<div class="cand"><span class="nm">' + esc(c.name) + "<small>" + esc(c.party) + "</small>" +
-          (c.winner ? '<span class="win">' + T.winner + "</span>" : "") + '</span><span class="pc">' + fmt(pc) + ' %</span>' +
-          '<span class="tr"><b style="width:' + Math.min(100, pc) + "%;background:" + COLORS[k].def + '"></b></span></div>';
-      }).join("");
-    }
+    if (s.status === "none") { $("detail").innerHTML = html + '<div class="meta"></div><p class="hint">' + T.noRace + "</p>"; return; }
+    var noVotes = !(s.cands || []).some(function(c){ return num(c.votes) > 0; });
+    html += '<div class="meta">' + (noVotes ? T.pending : T.reporting(Math.round(s.reporting || 0))) + "</div>";
+    // Toujours 3 lignes (les 3 premiers candidats renvoyés par l'API), complétées par des lignes vides
+    var rows = (s.cands || []).slice(0, 3);
+    while (rows.length < 3) rows.push(null);
+    html += rows.map(function(c){
+      if (!c) return '<div class="cand empty"><span class="nm">&nbsp;</span><span class="pc"></span><span class="tr"></span></div>';
+      var k = partyKey(c.party), pc = num(c.percent);
+      return '<div class="cand"><span class="nm">' + esc(c.name) + "<small>" + esc(c.party) + "</small>" +
+        (c.winner ? '<span class="win">' + T.winner + "</span>" : "") + "</span>" +
+        (noVotes ? '<span class="pc na">–</span>' : '<span class="pc">' + fmt(pc) + " %</span>") +
+        '<span class="tr"><b style="width:' + (noVotes ? 0 : Math.min(100, pc)) + "%;background:" + COLORS[k].def + '"></b></span></div>';
+    }).join("");
     $("detail").innerHTML = html;
   }
 
