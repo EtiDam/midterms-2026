@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Midterms 2026</title>
+<!--
+  Module « Midterms 2026 » — carte tilegram des États américains.
+  Données : civicAPI (https://civicapi.org) — attribution obligatoire, conservée en pied de module.
+  Gabarit des hexagones repris du module Blick US 2024 (utils.blick.ch/static/visuals/us/).
+
+  Paramètres d'URL :
+    lang   = fr | de                     (défaut : fr)
+    race   = senate | house | governor   (défaut : senate)
+    layout = home                        (version compacte pour la homepage, sans onglets)
+    demo   = 1                           (résultats fictifs aléatoires, pour tester le rendu)
+
+  Exemples :
+    index.html?lang=fr
+    index.html?lang=de&race=house
+    index.html?lang=fr&layout=home&race=senate
+-->
+<style>
+  :root{
+    --d:#1b73a5; --d-prov:#4eaace;
+    --r:#e20000; --r-prov:#fb8163;
+    --o:#8a8a8a; --o-prov:#c5c5c5;
+    --pending:#cfcfcf; --norace:#ffffff; --norace-line:#c9c9c9;
+    --ink:#111; --muted:#6b6b6b; --line:#d9d9d9; --bg:#fff;
+    --font:"BlickVariable","GT America",Arial,Helvetica,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-text-size-adjust:100%}
+  .wrap{max-width:1000px;margin:0 auto;padding:16px}
+  .layout-home .wrap{padding:8px 12px}
+
+  h1{font-size:28px;line-height:1.1;margin:0 0 4px;font-weight:800;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 14px}
+  .layout-home h1{font-size:20px}
+  .layout-home .sub{display:none}
+
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px}
+  .tabs button{font:inherit;font-size:14px;font-weight:700;border:2px solid var(--ink);background:#fff;color:var(--ink);
+    padding:7px 12px;border-radius:999px;cursor:pointer}
+  .tabs button[aria-selected="true"]{background:var(--ink);color:#fff}
+  .layout-home .tabs{display:none}
+
+  /* Jauge */
+  .gauge-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:6px}
+  .side{font-weight:800;line-height:1.05}
+  .side .n{font-size:40px;display:block}
+  .side .p{font-size:13px;font-weight:700;letter-spacing:.02em;text-transform:uppercase}
+  .side.d{color:var(--d)} .side.r{color:var(--r);text-align:right}
+  .mid{font-size:13px;color:var(--muted);text-align:center;padding-bottom:4px}
+  .layout-home .side .n{font-size:30px}
+  .bar{position:relative;display:flex;height:22px;background:var(--pending);border-radius:3px;overflow:hidden}
+  .bar span{height:100%;transition:width .5s ease}
+  .bar .sd{background:var(--d)} .bar .sdp{background:var(--d-prov)}
+  .bar .sp{flex:1}
+  .bar .srp{background:var(--r-prov)} .bar .sr{background:var(--r)}
+  .bar .so{background:var(--o)}
+  .bar .maj{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink)}
+  .gauge-foot{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:6px;gap:8px}
+
+  /* Carte */
+  .map{margin:14px 0 4px}
+  .map svg{display:block;width:100%;height:auto;overflow:visible}
+  .hex{cursor:pointer;stroke:#fff;stroke-width:5;transition:fill .4s ease}
+  .hex:focus{outline:none}
+  .st.sel .hex,.st:focus-visible .hex{stroke:var(--ink);stroke-width:8}
+  .lab{font-family:var(--font);font-size:36px;font-weight:700;text-anchor:middle;dominant-baseline:central;pointer-events:none;fill:#fff}
+  .lab.dark{fill:#4a4a4a} .lab.faint{fill:#c9c9c9;font-weight:400}
+  /* État sans élection pour ce poste : hexagone vide en pointillés, non cliquable */
+  .st.none .hex{fill:var(--norace)!important;stroke:var(--norace-line);stroke-width:3;stroke-dasharray:10 8;cursor:default}
+  .st.none{cursor:default}
+  @media (max-width:600px){ .lab{font-size:46px} .side .n{font-size:30px} h1{font-size:22px} }
+
+  .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);justify-content:center;margin:6px 0 10px}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+  .layout-home .legend{margin-bottom:4px}
+
+  /* Détail d'un État */
+  .detail{border-top:2px solid var(--ink);padding:12px 0 4px;min-height:64px}
+  .detail h2{font-size:18px;margin:0 0 2px;font-weight:800}
+  .detail .meta{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .detail .hint{font-size:14px;color:var(--muted)}
+  .cand{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;margin-bottom:9px;font-size:15px}
+  .cand .nm{font-weight:700}
+  .cand .nm small{font-weight:400;color:var(--muted);font-size:12px;margin-left:4px}
+  .cand .pc{font-weight:800;font-variant-numeric:tabular-nums}
+  .cand .tr{grid-column:1/-1;height:6px;background:#eee;border-radius:3px;overflow:hidden}
+  .cand .tr b{display:block;height:100%}
+  .win{display:inline-block;font-size:11px;font-weight:800;color:#fff;background:var(--ink);border-radius:3px;padding:1px 5px;margin-left:6px;vertical-align:1px;text-transform:uppercase}
+  .layout-home .detail{display:none}
+
+  .foot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
+  .foot a{color:inherit}
+  .err{color:var(--r)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="title"></h1>
+  <p class="sub" id="sub"></p>
+  <div class="tabs" role="tablist" id="tabs"></div>
+
+  <section id="gauge" aria-live="polite"></section>
+
+  <div class="map" id="map"></div>
+  <div class="legend" id="legend"></div>
+  <div class="detail" id="detail"></div>
+
+  <div class="foot">
+    <span id="source"></span>
+    <span id="updated"></span>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ------------------------------------------------------------------
+     Réglages
+  ------------------------------------------------------------------ */
+  var ELECTION_DATE = "2026-11-03";
+  var API = "https://civicapi.org/api/v2/race/search";
+  var REFRESH_MS = 60000;
+
+  // Sièges du Sénat qui ne sont PAS renouvelés en 2026 (100 − 35 en jeu).
+  // Indépendants qui siègent avec les démocrates (King, Sanders) comptés côté D.
+  // À vérifier avant publication si la composition du Sénat a changé.
+  var SENATE_HOLDOVER = { D: 34, R: 31 };
+
+  /* ------------------------------------------------------------------
+     Paramètres d'URL
+  ------------------------------------------------------------------ */
+  var qs = new URLSearchParams(location.search);
+  var LANG = qs.get("lang") === "de" ? "de" : "fr";
+  var HOME = qs.get("layout") === "home";
+  var DEMO = qs.get("demo") === "1";
+  var RACE = ["senate","house","governor"].indexOf(qs.get("race")) >= 0 ? qs.get("race") : "senate";
+  document.documentElement.lang = LANG;
+  if (HOME) document.body.classList.add("layout-home");
+
+  /* ------------------------------------------------------------------
+     Textes
+  ------------------------------------------------------------------ */
+  var T = {
+    fr: {
+      title: "Midterms 2026",
+      sub: "Résultats en direct des élections de mi-mandat aux États-Unis, État par État.",
+      tabs: { senate: "Sénat", house: "Chambre des représentants", governor: "Gouverneurs" },
+      homeTitle: { senate: "Midterms : le Sénat", house: "Midterms : la Chambre", governor: "Midterms : les gouverneurs" },
+      dem: "Démocrates", rep: "Républicains", oth: "Autres",
+      seats: "sièges", races: "élections",
+      majority: function(n){ return n + " pour la majorité"; },
+      undecided: function(n){ return n + " non attribués"; },
+      notUp: function(d,r){ return "Dont non renouvelés : " + d + " D, " + r + " R"; },
+      leading: function(d,r,u){ return "En tête : " + d + " D, " + r + " R"; },
+      govTotal: function(n){ return n + " postes de gouverneur en jeu"; },
+      legend: { def: "Élu", prov: "En tête", pending: "Pas encore de résultat", none: "Pas d'élection en 2026" },
+      reporting: function(p){ return p + " % des votes dépouillés"; },
+      noRace: "Pas d'élection pour ce poste dans cet État en 2026.",
+      pending: "Pas encore de résultats.",
+      hint: "Touchez ou survolez un État pour voir les résultats.",
+      winner: "Élu",
+      houseDetail: function(d,r,o,t){ return "D " + d + " · R " + r + (o ? " · Autres " + o : "") + " · sur " + t + " sièges"; },
+      houseLead: "Sièges attribués",
+      source: "Source : ",
+      updated: function(t){ return "Mis à jour à " + t; },
+      error: "Impossible de charger les résultats pour le moment.",
+      demo: " (DÉMO — données fictives)"
+    },
+    de: {
+      title: "Midterms 2026",
+      sub: "Live-Resultate der US-Zwischenwahlen, Bundesstaat für Bundesstaat.",
+      tabs: { senate: "Senat", house: "Repräsentantenhaus", governor: "Gouverneure" },
+      homeTitle: { senate: "Midterms: der Senat", house: "Midterms: das Repräsentantenhaus", governor: "Midterms: die Gouverneure" },
+      dem: "Demokraten", rep: "Republikaner", oth: "Andere",
+      seats: "Sitze", races: "Wahlen",
+      majority: function(n){ return n + " für die Mehrheit"; },
+      undecided: function(n){ return n + " noch offen"; },
+      notUp: function(d,r){ return "Davon nicht zur Wahl: " + d + " D, " + r + " R"; },
+      leading: function(d,r,u){ return "Führend: " + d + " D, " + r + " R"; },
+      govTotal: function(n){ return n + " Gouverneursposten zur Wahl"; },
+      legend: { def: "Gewählt", prov: "Führt", pending: "Noch kein Resultat", none: "Keine Wahl 2026" },
+      reporting: function(p){ return p + " % der Stimmen ausgezählt"; },
+      noRace: "Keine Wahl für dieses Amt in diesem Bundesstaat 2026.",
+      pending: "Noch keine Resultate.",
+      hint: "Tippe oder fahre über einen Bundesstaat, um die Resultate zu sehen.",
+      winner: "Gewählt",
+      houseDetail: function(d,r,o,t){ return "D " + d + " · R " + r + (o ? " · Andere " + o : "") + " · von " + t + " Sitzen"; },
+      houseLead: "Vergebene Sitze",
+      source: "Quelle: ",
+      updated: function(t){ return "Aktualisiert um " + t; },
+      error: "Die Resultate können im Moment nicht geladen werden.",
+      demo: " (DEMO – fiktive Daten)"
+    }
+  }[LANG];
+
+  var NAMES = {
+    AL:["Alabama","Alabama"],AK:["Alaska","Alaska"],AZ:["Arizona","Arizona"],AR:["Arkansas","Arkansas"],
+    CA:["Californie","Kalifornien"],CO:["Colorado","Colorado"],CT:["Connecticut","Connecticut"],
+    DE:["Delaware","Delaware"],DC:["District de Columbia","District of Columbia"],FL:["Floride","Florida"],
+    GA:["Géorgie","Georgia"],HI:["Hawaï","Hawaii"],ID:["Idaho","Idaho"],IL:["Illinois","Illinois"],
+    IN:["Indiana","Indiana"],IA:["Iowa","Iowa"],KS:["Kansas","Kansas"],KY:["Kentucky","Kentucky"],
+    LA:["Louisiane","Louisiana"],ME:["Maine","Maine"],MD:["Maryland","Maryland"],MA:["Massachusetts","Massachusetts"],
+    MI:["Michigan","Michigan"],MN:["Minnesota","Minnesota"],MS:["Mississippi","Mississippi"],MO:["Missouri","Missouri"],
+    MT:["Montana","Montana"],NE:["Nebraska","Nebraska"],NV:["Nevada","Nevada"],NH:["New Hampshire","New Hampshire"],
+    NJ:["New Jersey","New Jersey"],NM:["Nouveau-Mexique","New Mexico"],NY:["New York","New York"],
+    NC:["Caroline du Nord","North Carolina"],ND:["Dakota du Nord","North Dakota"],OH:["Ohio","Ohio"],
+    OK:["Oklahoma","Oklahoma"],OR:["Oregon","Oregon"],PA:["Pennsylvanie","Pennsylvania"],RI:["Rhode Island","Rhode Island"],
+    SC:["Caroline du Sud","South Carolina"],SD:["Dakota du Sud","South Dakota"],TN:["Tennessee","Tennessee"],
+    TX:["Texas","Texas"],UT:["Utah","Utah"],VT:["Vermont","Vermont"],VA:["Virginie","Virginia"],
+    WA:["Washington","Washington"],WV:["Virginie-Occidentale","West Virginia"],WI:["Wisconsin","Wisconsin"],WY:["Wyoming","Wyoming"]
+  };
+  function stateName(s){ return (NAMES[s] || [s,s])[LANG === "de" ? 1 : 0]; }
+
+  /* ------------------------------------------------------------------
+     Gabarit tilegram (centres des hexagones, repris du module Blick 2024)
+     Hexagones « pointe en haut » : demi-largeur 63,3, demi-hauteur 73,15.
+  ------------------------------------------------------------------ */
+  var HEX = "WA:143.7,327 OR:143.7,570.6 CA:214,692.5 ID:214,448.6 WY:354.8,448.6 SD:495.5,449 AZ:425.1,814.5 " +
+    "NM:495.5,692.6 MT:284.4,326.9 ND:425.1,327 LA:706.6,814.5 TN:917.6,692.6 MS:847.3,814.5 AL:988.1,814.5 " +
+    "GA:1128.8,814.5 WV:988.1,570.6 VA:1128.8,570.6 NC:1058.4,692.6 SC:1199.1,692.6 FL:1058.4,936.5 " +
+    "DC:1339.8,692.6 PA:1199.1,449 MD:1269.4,570.7 DE:1410.2,570.7 NJ:1339.8,448.6 NY:1269.5,326.8 " +
+    "CT:1480.6,448.6 MA:1410.2,326.8 VT:1339.8,205.1 NH:1480.6,205.1 RI:1550.9,326.8 OK:565.9,814.5 " +
+    "TX:636.2,936.5 MN:565.9,327 AR:777,692.6 NV:284.4,570.6 NE:565.9,570.6 UT:354.8,692.6 CO:425.1,570.7 " +
+    "KY:847.3,570.6 KS:636.3,692.6 IA:636.3,448.6 MO:706.6,570.6 IL:777,448.6 WI:706.6,326.9 MI:988.1,327 " +
+    "IN:917.6,448.6 ME:1550.9,83.1 AK:73.3,83.1 HI:73.3,936.5 OH:1058.4,448.6";
+  var TILES = HEX.split(" ").map(function(s){
+    var a = s.split(":"), c = a[1].split(",");
+    return { st: a[0], x: +c[0], y: +c[1] };
+  });
+  var W = 63.3, H1 = 36.55, H2 = 73.15;
+  function hexPoints(x, y){
+    return [[x+W,y+H1],[x+W,y-H1],[x,y-H2],[x-W,y-H1],[x-W,y+H1],[x,y+H2]]
+      .map(function(p){ return p[0].toFixed(1) + "," + p[1].toFixed(1); }).join(" ");
+  }
+
+  /* ------------------------------------------------------------------
+     Données
+  ------------------------------------------------------------------ */
+  var COLORS = {
+    D: { def: "var(--d)", prov: "var(--d-prov)" },
+    R: { def: "var(--r)", prov: "var(--r-prov)" },
+    O: { def: "var(--o)", prov: "var(--o-prov)" }
+  };
+  function partyKey(p){
+    p = (p || "").toLowerCase();
+    if (p.indexOf("democrat") >= 0) return "D";
+    if (p.indexOf("republican") >= 0) return "R";
+    return "O";
+  }
+  function num(v){ var n = parseFloat(v); return isNaN(n) ? 0 : n; }
+
+  // Résumé d'une course : statut (none / pending / prov / def), parti en tête ou élu
+  function summarize(race){
+    if (!race) return { status: "none" };
+    var cands = (race.candidates || []).slice().sort(function(a,b){ return num(b.percent) - num(a.percent) || num(b.votes) - num(a.votes); });
+    var win = cands.filter(function(c){ return c.winner; })[0];
+    var rep = num(race.percent_reporting);
+    if (win) return { status: "def", party: partyKey(win.party), cands: cands, reporting: rep, race: race };
+    if (rep > 0 && cands.length && num(cands[0].votes) > 0) return { status: "prov", party: partyKey(cands[0].party), cands: cands, reporting: rep, race: race };
+    return { status: "pending", cands: cands, reporting: rep, race: race };
+  }
+
+  function fetchType(electionType){
+    var url = API + "?startDate=" + ELECTION_DATE + "&endDate=" + ELECTION_DATE +
+      "&country=US&election_type=" + electionType + "&limit=50000";
+    return fetch(url, { cache: "no-store" }).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(j){ return j.races || []; });
+  }
+
+  // Renvoie { byState: {AL: summary...}, totals... } selon la course affichée
+  function load(){
+    if (RACE === "governor") {
+      return fetchType("Statewide").then(function(races){
+        return races.filter(function(r){ return r.type === "Governor" && NAMES[r.province]; });
+      });
+    }
+    return fetchType("General").then(function(races){
+      if (RACE === "senate") return races.filter(function(r){ return r.type === "US Senate" && NAMES[r.province]; });
+      return races.filter(function(r){ return r.type === "House of Representatives" && NAMES[r.province]; });
+    });
+  }
+
+  /* ------------------------------------------------------------------
+     Mode démo : résultats fictifs pour tester le rendu
+  ------------------------------------------------------------------ */
+  var demoSeed = Date.now();
+  function demoize(races){
+    var rnd = (function(s){ return function(){ s = (s * 9301 + 49297) % 233280; return s / 233280; }; })(demoSeed % 233280);
+    return races.map(function(r){
+      var c = JSON.parse(JSON.stringify(r));
+      var x = rnd(), rep = x < .2 ? 0 : Math.min(100, Math.round(rnd() * 100));
+      var total = 0;
+      (c.candidates || []).forEach(function(k){ var v = Math.round(rnd() * 100000 * (partyKey(k.party) === "O" ? .15 : 1)); k.votes = v; total += v; });
+      (c.candidates || []).forEach(function(k){ k.percent = total ? Math.round(k.votes / total * 1000) / 10 : 0; k.winner = false; });
+      c.percent_reporting = rep;
+      if (rep > 70 && c.candidates && c.candidates.length) {
+        var best = c.candidates.slice().sort(function(a,b){ return b.votes - a.votes; })[0];
+        best.winner = true;
+      }
+      if (rep === 0) (c.candidates || []).forEach(function(k){ k.votes = 0; k.percent = 0; });
+      return c;
+    });
+  }
+
+  /* ------------------------------------------------------------------
+     Rendu
+  ------------------------------------------------------------------ */
+  var $ = function(id){ return document.getElementById(id); };
+  var selected = null, lastStates = {};
+
+  function renderChrome(){
+    $("title").textContent = HOME ? T.homeTitle[RACE] : T.title;
+    $("sub").textContent = T.sub + (DEMO ? T.demo : "");
+    if (HOME && DEMO) $("title").textContent += T.demo;
+    var tabs = $("tabs"); tabs.innerHTML = "";
+    ["senate","house","governor"].forEach(function(k){
+      var b = document.createElement("button");
+      b.type = "button"; b.setAttribute("role","tab");
+      b.setAttribute("aria-selected", k === RACE ? "true" : "false");
+      b.textContent = T.tabs[k];
+      b.onclick = function(){ if (k !== RACE){ RACE = k; selected = null; renderChrome(); refresh(); } };
+      tabs.appendChild(b);
+    });
+    $("source").innerHTML = T.source + '<a href="https://civicapi.org" target="_blank" rel="noopener">civicAPI</a>';
+    var L = T.legend;
+    $("legend").innerHTML =
+      '<span><i style="background:var(--d)"></i><i style="background:var(--r)"></i>' + L.def + '</span>' +
+      '<span><i style="background:var(--d-prov)"></i><i style="background:var(--r-prov)"></i>' + L.prov + '</span>' +
+      '<span><i style="background:var(--pending)"></i>' + L.pending + '</span>' +
+      (RACE === "house" ? "" : '<span><i style="background:var(--norace);border:1px dashed var(--norace-line)"></i>' + L.none + '</span>');
+    $("detail").innerHTML = '<p class="hint">' + T.hint + '</p>';
+  }
+
+  function buildMap(){
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 1625 1020");
+    svg.setAttribute("role", "img");
+    TILES.forEach(function(t){
+      var g = document.createElementNS(ns, "g");
+      g.setAttribute("class", "st"); g.setAttribute("data-st", t.st);
+      g.setAttribute("tabindex", "0");
+      var p = document.createElementNS(ns, "polygon");
+      p.setAttribute("class", "hex"); p.setAttribute("points", hexPoints(t.x, t.y));
+      var tx = document.createElementNS(ns, "text");
+      tx.setAttribute("class", "lab"); tx.setAttribute("x", t.x); tx.setAttribute("y", t.y);
+      tx.textContent = t.st;
+      var title = document.createElementNS(ns, "title"); title.textContent = stateName(t.st);
+      g.appendChild(title); g.appendChild(p); g.appendChild(tx);
+      g.addEventListener("mouseenter", function(){ if (!HOME && matchMedia("(hover:hover)").matches) showDetail(t.st); });
+      g.addEventListener("click", function(){ if (!g.classList.contains("none") || RACE !== "house") select(t.st); });
+      g.addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === " "){ e.preventDefault(); select(t.st); } });
+      svg.appendChild(g);
+    });
+    $("map").innerHTML = ""; $("map").appendChild(svg);
+  }
+
+  function select(st){
+    selected = st;
+    document.querySelectorAll(".st").forEach(function(g){ g.classList.toggle("sel", g.getAttribute("data-st") === st); });
+    showDetail(st);
+  }
+
+  function paint(states){
+    lastStates = states;
+    document.querySelectorAll(".st").forEach(function(g){
+      var st = g.getAttribute("data-st"), s = states[st] || { status: "none" };
+      var hex = g.querySelector(".hex"), lab = g.querySelector(".lab");
+      var fill = s.status === "def" ? COLORS[s.party].def
+               : s.status === "prov" ? COLORS[s.party].prov
+               : s.status === "pending" ? "var(--pending)" : "var(--norace)";
+      hex.style.fill = fill;
+      g.classList.toggle("none", s.status === "none");
+      lab.setAttribute("class", "lab" + (s.status === "pending" ? " dark" : s.status === "none" ? " faint" : ""));
+    });
+    if (selected) showDetail(selected);
+  }
+
+  function showDetail(st){
+    var s = lastStates[st] || { status: "none" }, html = "<h2>" + stateName(st) + "</h2>";
+    if (RACE === "house") {
+      if (!s.house) { $("detail").innerHTML = html + '<p class="hint">' + T.pending + "</p>"; return; }
+      var h = s.house;
+      html += '<div class="meta">' + T.houseLead + "</div>";
+      html += '<div class="cand"><span class="nm">' + T.houseDetail(h.D, h.R, h.O, h.total) + "</span></div>";
+      $("detail").innerHTML = html; return;
+    }
+    if (s.status === "none") { $("detail").innerHTML = html + '<p class="hint">' + T.noRace + "</p>"; return; }
+    html += '<div class="meta">' + T.reporting(Math.round(s.reporting || 0)) + "</div>";
+    if (s.status === "pending" && !(s.cands || []).some(function(c){ return num(c.votes) > 0; })) {
+      html += (s.cands || []).map(function(c){
+        return '<div class="cand"><span class="nm">' + esc(c.name) + "<small>" + esc(c.party) + "</small></span><span></span></div>";
+      }).join("") + '<p class="hint">' + T.pending + "</p>";
+    } else {
+      html += (s.cands || []).map(function(c){
+        var k = partyKey(c.party), pc = num(c.percent);
+        return '<div class="cand"><span class="nm">' + esc(c.name) + "<small>" + esc(c.party) + "</small>" +
+          (c.winner ? '<span class="win">' + T.winner + "</span>" : "") + '</span><span class="pc">' + fmt(pc) + ' %</span>' +
+          '<span class="tr"><b style="width:' + Math.min(100, pc) + "%;background:" + COLORS[k].def + '"></b></span></div>';
+      }).join("");
+    }
+    $("detail").innerHTML = html;
+  }
+
+  function fmt(n){ return (Math.round(n * 10) / 10).toLocaleString(LANG === "de" ? "de-CH" : "fr-CH"); }
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return { "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]; }); }
+
+  function renderGauge(c, total, majority, holdover){
+    // c = { D, Dp, R, Rp, O } ; D/R incluent les sièges non renouvelés
+    var pct = function(n){ return (n / total * 100).toFixed(3) + "%"; };
+    var undecided = total - c.D - c.Dp - c.R - c.Rp - c.O;
+    var unit = RACE === "governor" ? T.races : T.seats;
+    var html =
+      '<div class="gauge-head">' +
+        '<div class="side d"><span class="n">' + c.D + '</span><span class="p">' + T.dem + "</span></div>" +
+        '<div class="mid">' + (majority ? T.majority(majority) : T.govTotal(total)) + "</div>" +
+        '<div class="side r"><span class="n">' + c.R + '</span><span class="p">' + T.rep + "</span></div>" +
+      "</div>" +
+      '<div class="bar" role="img" aria-label="' + T.dem + " " + c.D + ", " + T.rep + " " + c.R + '">' +
+        '<span class="sd" style="width:' + pct(c.D) + '"></span>' +
+        '<span class="sdp" style="width:' + pct(c.Dp) + '"></span>' +
+        '<span class="sp"></span>' +
+        (c.O ? '<span class="so" style="width:' + pct(c.O) + '"></span>' : "") +
+        '<span class="srp" style="width:' + pct(c.Rp) + '"></span>' +
+        '<span class="sr" style="width:' + pct(c.R) + '"></span>' +
+        (majority ? '<span class="maj" style="left:calc(' + pct(majority - .5) + ' - 1px)"></span>' : "") +
+      "</div>" +
+      '<div class="gauge-foot"><span>' + (holdover ? T.notUp(holdover.D, holdover.R) : T.leading(c.Dp, c.Rp, unit)) + "</span>" +
+        "<span>" + (c.O ? T.oth + " " + c.O + " · " : "") + T.undecided(undecided) + "</span></div>";
+    $("gauge").innerHTML = html;
+  }
+
+  function process(races){
+    if (DEMO) races = demoize(races);
+    var states = {}, c = { D: 0, Dp: 0, R: 0, Rp: 0, O: 0 };
+
+    if (RACE === "house") {
+      var by = {};
+      races.forEach(function(r){
+        var s = summarize(r), b = by[r.province] || (by[r.province] = { D:0, R:0, O:0, Dp:0, Rp:0, total:0 });
+        b.total++;
+        if (s.status === "def") { b[s.party]++; c[s.party]++; }
+        else if (s.status === "prov") { if (s.party === "D") { b.Dp++; c.Dp++; } else if (s.party === "R") { b.Rp++; c.Rp++; } }
+      });
+      Object.keys(by).forEach(function(st){
+        var b = by[st], dAll = b.D + b.Dp, rAll = b.R + b.Rp;
+        var st2 = { status: "pending", house: b };
+        if (dAll || rAll) {
+          var party = dAll > rAll ? "D" : rAll > dAll ? "R" : null;
+          var decided = b.D + b.R + b.O === b.total;
+          if (party) { st2.status = decided ? "def" : "prov"; st2.party = party; }
+        }
+        states[st] = st2;
+      });
+      renderGauge(c, 435, 218, null);
+    } else {
+      races.forEach(function(r){
+        var s = summarize(r);
+        if (states[r.province] && states[r.province].status !== "pending" && s.status === "pending") return;
+        states[r.province] = s;
+        if (s.status === "def") c[s.party]++;
+        else if (s.status === "prov") { if (s.party === "D") c.Dp++; else if (s.party === "R") c.Rp++; }
+      });
+      if (RACE === "senate") {
+        c.D += SENATE_HOLDOVER.D; c.R += SENATE_HOLDOVER.R;
+        renderGauge(c, 100, 51, SENATE_HOLDOVER);
+      } else {
+        renderGauge(c, races.length, null, null);
+      }
+    }
+    paint(states);
+    var now = new Date().toLocaleTimeString(LANG === "de" ? "de-CH" : "fr-CH", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Zurich" });
+    $("updated").textContent = T.updated(now);
+  }
+
+  var timer = null, inflight = 0;
+  function refresh(){
+    clearTimeout(timer);
+    var id = ++inflight;
+    load().then(function(races){ if (id === inflight) process(races); })
+      .catch(function(){ if (id === inflight) $("updated").innerHTML = '<span class="err">' + T.error + "</span>"; })
+      .then(function(){ timer = setTimeout(refresh, REFRESH_MS); });
+  }
+
+  renderChrome();
+  buildMap();
+  refresh();
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden) refresh(); });
+})();
+</script>
+<!-- Ajustement automatique de la hauteur de l'iframe dans les articles et l'appli Blick (comme le module 2024) -->
+<script src="https://www.blick.ch/assets/iframeHeightAdjustment.js"></script>
+</body>
+</html>
