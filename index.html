@@ -14,6 +14,8 @@
     race   = senate | house | governor   (défaut : senate)
     layout = home                        (version compacte pour la homepage, sans onglets)
     demo   = 1                           (résultats fictifs aléatoires, pour tester le rendu)
+    theme  = dark | light                (défaut : suit le mode clair/sombre de l'appareil)
+    bg     = transparent                 (fond transparent, prend celui de la page)
 
   Exemples :
     index.html?lang=fr
@@ -27,9 +29,26 @@
     --o:#8a8a8a; --o-prov:#c5c5c5;
     --pending:#cfcfcf; --norace:#ffffff; --norace-line:#c9c9c9;
     --ink:#111; --muted:#6b6b6b; --line:#d9d9d9; --bg:#fff;
+    --on-ink:#fff; --track:#eee; --lab-pending:#4a4a4a; --lab-faint:#c9c9c9; --d-text:#1b73a5; --r-text:#e20000;
     --font:"BlickVariable","GT America",Arial,Helvetica,sans-serif;
   }
+  /* Thème sombre : suit l'appareil du lecteur, ou forcé avec ?theme=dark / ?theme=light */
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --pending:#4a4a4a; --norace:transparent; --norace-line:#555;
+      --ink:#f2f2f2; --muted:#a0a0a0; --line:#333; --bg:#111;
+      --on-ink:#111; --track:#2a2a2a; --lab-pending:#e6e6e6; --lab-faint:#666;
+      --o:#9a9a9a; --d-text:#5fb6e0; --r-text:#ff4a4a; color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --pending:#4a4a4a; --norace:transparent; --norace-line:#555;
+    --ink:#f2f2f2; --muted:#a0a0a0; --line:#333; --bg:#111;
+    --on-ink:#111; --track:#2a2a2a; --lab-pending:#e6e6e6; --lab-faint:#666;
+    --o:#9a9a9a; --d-text:#5fb6e0; --r-text:#ff4a4a; color-scheme:dark;
+  }
   *{box-sizing:border-box}
+  html.bg-transparent,html.bg-transparent body{background:transparent}
   html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-text-size-adjust:100%}
   .wrap{max-width:1000px;margin:0 auto;padding:16px}
   .layout-home .wrap{padding:8px 12px}
@@ -40,9 +59,9 @@
   .layout-home .sub{display:none}
 
   .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px}
-  .tabs button{font:inherit;font-size:14px;font-weight:700;border:2px solid var(--ink);background:#fff;color:var(--ink);
+  .tabs button{font:inherit;font-size:14px;font-weight:700;border:2px solid var(--ink);background:var(--bg);color:var(--ink);
     padding:7px 12px;border-radius:999px;cursor:pointer}
-  .tabs button[aria-selected="true"]{background:var(--ink);color:#fff}
+  .tabs button[aria-selected="true"]{background:var(--ink);color:var(--on-ink)}
   .layout-home .tabs{display:none}
 
   /* Jauge */
@@ -50,7 +69,7 @@
   .side{font-weight:800;line-height:1.05}
   .side .n{font-size:40px;display:block}
   .side .p{font-size:13px;font-weight:700;letter-spacing:.02em;text-transform:uppercase}
-  .side.d{color:var(--d)} .side.r{color:var(--r);text-align:right}
+  .side.d{color:var(--d-text)} .side.r{color:var(--r-text);text-align:right}
   .mid{font-size:13px;color:var(--muted);text-align:center;padding-bottom:4px}
   .layout-home .side .n{font-size:30px}
   .bar{position:relative;display:flex;height:22px;background:var(--pending);border-radius:3px;overflow:hidden}
@@ -66,17 +85,17 @@
   /* Carte */
   .map{margin:14px 0 4px}
   .map svg{display:block;width:100%;height:auto;overflow:visible}
-  .hex{cursor:pointer;fill:var(--pending);stroke:#fff;stroke-width:5;transition:fill .4s ease}
+  .hex{cursor:pointer;fill:var(--pending);stroke:var(--bg);stroke-width:5;transition:fill .4s ease}
   .hex:focus,.st:focus{outline:none}
-  .outline{fill:none;stroke:#fff;stroke-width:5;pointer-events:none}
+  .outline{fill:none;stroke:var(--bg);stroke-width:5;pointer-events:none}
   .st.sel .outline,.st:focus-visible .outline{stroke:var(--ink);stroke-width:8}
   .stripes{pointer-events:none}
-  .stripes .sep{stroke:#fff;stroke-width:1.5;opacity:.55}
+  .stripes .sep{stroke:var(--bg);stroke-width:1.5;opacity:.55}
   .num{font-family:var(--font);font-size:24px;font-weight:700;text-anchor:middle;dominant-baseline:central;pointer-events:none;fill:#fff;
     paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:5px}
   .st.house .lab{paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:6px;fill:#fff}
   .lab{font-family:var(--font);font-size:36px;font-weight:700;text-anchor:middle;dominant-baseline:central;pointer-events:none;fill:#fff}
-  .lab.dark{fill:#4a4a4a} .lab.faint{fill:#c9c9c9;font-weight:400}
+  .lab.dark{fill:var(--lab-pending)} .lab.faint{fill:var(--lab-faint);font-weight:400}
   /* État sans élection pour ce poste : hexagone vide en pointillés, non cliquable */
   .st.none .hex{fill:var(--norace)!important;stroke:var(--norace-line);stroke-width:3;stroke-dasharray:10 8;cursor:default}
   .st.none{cursor:default}
@@ -99,9 +118,9 @@
   .cand .pc.na{color:var(--muted);font-weight:400}
   .cand .nm small{font-weight:400;color:var(--muted);font-size:12px;margin-left:4px}
   .cand .pc{font-weight:800;font-variant-numeric:tabular-nums}
-  .cand .tr{grid-column:1/-1;height:6px;background:#eee;border-radius:3px;overflow:hidden}
+  .cand .tr{grid-column:1/-1;height:6px;background:var(--track);border-radius:3px;overflow:hidden}
   .cand .tr b{display:block;height:100%}
-  .win{display:inline-block;font-size:11px;font-weight:800;color:#fff;background:var(--ink);border-radius:3px;padding:1px 5px;margin-left:6px;vertical-align:1px;text-transform:uppercase}
+  .win{display:inline-block;font-size:11px;font-weight:800;color:var(--on-ink);background:var(--ink);border-radius:3px;padding:1px 5px;margin-left:6px;vertical-align:1px;text-transform:uppercase}
   .layout-home .detail{display:none}
 
   .foot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px;margin-top:8px}
@@ -153,6 +172,10 @@
   var RACE = ["senate","house","governor"].indexOf(qs.get("race")) >= 0 ? qs.get("race") : "senate";
   document.documentElement.lang = LANG;
   if (HOME) document.body.classList.add("layout-home");
+  var THEME = qs.get("theme");
+  if (THEME === "dark" || THEME === "light") document.documentElement.setAttribute("data-theme", THEME);
+  // ?bg=transparent : le fond du module laisse voir celui de la page Blick
+  if (qs.get("bg") === "transparent") { document.documentElement.style.setProperty("--bg-page", "transparent"); document.documentElement.classList.add("bg-transparent"); }
 
   /* ------------------------------------------------------------------
      Textes
