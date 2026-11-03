@@ -594,7 +594,9 @@
         if (id !== inflight) return;
         delay = RETRY_MS;
         var c = readCache(typeFor(RACE));
-        $("updated").innerHTML = '<span class="err">' + (c ? T.stale(hhmm(c.at)) : T.error) + "</span>";
+        // Échec silencieux : si on a déjà des résultats, on garde simplement l'heure de leur dernière mise à jour
+        if (c) $("updated").textContent = T.updated(hhmm(c.at));
+        else $("updated").innerHTML = '<span class="err">' + T.error + "</span>";
       })
       .then(function(){ if (id === inflight) timer = setTimeout(refresh, delay); });
   }
