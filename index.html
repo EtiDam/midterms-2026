@@ -87,6 +87,12 @@
   .map svg{display:block;width:100%;height:auto;overflow:visible}
   .hex{cursor:pointer;fill:var(--pending);stroke:var(--bg);stroke-width:5;transition:fill .4s ease}
   .hex:focus,.st:focus{outline:none}
+  /* Chargement : les hexagones « respirent » doucement au lieu de rester figés */
+  @keyframes breathe{0%,100%{opacity:1}50%{opacity:.45}}
+  .map.loading .hex{animation:breathe 1.2s ease-in-out infinite}
+  .map.loading .st:nth-child(3n) .hex{animation-delay:.2s}
+  .map.loading .st:nth-child(3n+1) .hex{animation-delay:.4s}
+  @media (prefers-reduced-motion:reduce){ .map.loading .hex{animation:none;opacity:.6} }
   .outline{fill:none;stroke:var(--bg);stroke-width:5;pointer-events:none}
   .st.sel .outline,.st:focus-visible .outline{stroke:var(--ink);stroke-width:8}
   .stripes{pointer-events:none}
@@ -205,6 +211,7 @@
       source: "Source : ",
       updated: function(t){ return "Mis à jour à " + t; },
       error: "Impossible de charger les résultats pour le moment.",
+      loading: "Chargement des résultats…",
       stale: function(t){ return "Source lente : résultats de " + t + ", nouvel essai en cours"; },
       demo: " (DÉMO — données fictives)"
     },
@@ -232,6 +239,7 @@
       source: "Quelle: ",
       updated: function(t){ return "Aktualisiert um " + t; },
       error: "Die Resultate können im Moment nicht geladen werden.",
+      loading: "Resultate werden geladen…",
       stale: function(t){ return "Quelle langsam: Resultate von " + t + ", neuer Versuch läuft"; },
       demo: " (DEMO – fiktive Daten)"
     }
@@ -604,7 +612,7 @@
   // Affiche immédiatement les dernières données connues pour la course choisie
   function showCached(){
     var c = readCache(typeFor(RACE));
-    if (c) { process(pick(c.races), c.at); return true; }
+    if (c) { process(pick(c.races), c.at); $("map").classList.remove("loading"); return true; }
     return false;
   }
 
@@ -612,7 +620,10 @@
   function refresh(){
     clearTimeout(timer);
     var id = ++inflight, delay = REFRESH_MS;
-    load().then(function(races){ if (id === inflight) process(races); })
+    load().then(function(races){
+        if (id === inflight) { process(races); $("map").classList.remove("loading"); }
+        prefetchOther();
+      })
       .catch(function(){
         if (id !== inflight) return;
         delay = RETRY_MS;
@@ -623,22 +634,43 @@
       })
       .then(function(){ if (id === inflight) timer = setTimeout(refresh, delay); });
   }
-  // Sans données en cache pour la nouvelle course : carte neutre (gris) le temps du chargement
+  // Préchargement en arrière-plan de l'autre jeu de données (Sénat+Chambre <-> Gouverneurs),
+  // pour que le changement d'onglet s'affiche immédiatement depuis le cache.
+  var PREFETCH_MAX_AGE = 90000, prefetching = {};
+  function prefetchOther(){
+    var other = typeFor(RACE) === "General" ? "Statewide" : "General";
+    var c = mem[other];
+    if (prefetching[other] || (c && Date.now() - c.at < PREFETCH_MAX_AGE)) return;
+    prefetching[other] = true;
+    fetchType(other).catch(function(){}).then(function(){ prefetching[other] = false; });
+  }
+
+  // Sans données en cache pour la nouvelle course : carte neutre qui « respire » le temps du chargement
   function resetMap(){
     lastStates = {};
     document.querySelectorAll(".st").forEach(function(g){
       g.classList.remove("none");
       g.querySelector(".hex").style.fill = "";
       g.querySelector(".lab").setAttribute("class", "lab dark");
+      drawStripes(g, null);
     });
     $("gauge").innerHTML = "";
-    $("updated").textContent = "";
+    $("updated").textContent = T.loading;
+    $("map").classList.add("loading");
   }
   function switchRace(){ if (!showCached()) resetMap(); refresh(); }
 
+  // Thème imposé par la page parente (ex. site desktop en mode sombre) :
+  // la page Blick peut envoyer iframe.contentWindow.postMessage({ midtermsTheme: "dark" }, "*")
+  window.addEventListener("message", function(e){
+    var t = e && e.data && e.data.midtermsTheme;
+    if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
+    else if (t === "auto") document.documentElement.removeAttribute("data-theme");
+  });
+
   renderChrome();
   buildMap();
-  showCached();
+  if (!showCached()) $("map").classList.add("loading");
   refresh();
   document.addEventListener("visibilitychange", function(){ if (!document.hidden) refresh(); });
 })();
