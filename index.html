@@ -60,6 +60,7 @@
   .bar .srp{background:var(--r-prov)} .bar .sr{background:var(--r)}
   .bar .so{background:var(--o)}
   .bar .maj{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink)}
+  #gauge{min-height:112px}
   .gauge-foot{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:6px;gap:8px}
 
   /* Carte */
@@ -174,6 +175,7 @@
       source: "Source : ",
       updated: function(t){ return "Mis à jour à " + t; },
       error: "Impossible de charger les résultats pour le moment.",
+      stale: function(t){ return "Source lente : résultats de " + t + ", nouvel essai en cours"; },
       demo: " (DÉMO — données fictives)"
     },
     de: {
@@ -200,6 +202,7 @@
       source: "Quelle: ",
       updated: function(t){ return "Aktualisiert um " + t; },
       error: "Die Resultate können im Moment nicht geladen werden.",
+      stale: function(t){ return "Quelle langsam: Resultate von " + t + ", neuer Versuch läuft"; },
       demo: " (DEMO – fiktive Daten)"
     }
   }[LANG];
@@ -272,27 +275,56 @@
     return { status: "pending", cands: cands, reporting: rep, race: race };
   }
 
+  /* ------------------------------------------------------------------
+     Chargement avec cache : la carte s'affiche tout de suite avec les dernières
+     données connues (mémoire, puis navigateur du lecteur), puis se met à jour
+     dès que civicAPI répond. Utile quand l'API est lente ou saturée.
+  ------------------------------------------------------------------ */
+  var FETCH_TIMEOUT_MS = 20000;   // on abandonne une requête au-delà de 20 s
+  var RETRY_MS = 15000;           // en cas d'échec, nouvel essai après 15 s
+  var KEEP = { "US Senate": 1, "House of Representatives": 1, "Governor": 1 };
+  var mem = {};                    // { General: {races, at}, Statewide: {races, at} }
+
+  function slim(races){
+    // On ne garde que ce dont la carte a besoin (allège le stockage local)
+    return races.filter(function(r){ return KEEP[r.type] && NAMES[r.province]; }).map(function(r){
+      return { type: r.type, province: r.province, district: r.district, percent_reporting: r.percent_reporting,
+        candidates: (r.candidates || []).map(function(c){ return { name: c.name, party: c.party, votes: c.votes, percent: c.percent, winner: c.winner }; }) };
+    });
+  }
+  function storeKey(t){ return "midterms2026:" + ELECTION_DATE + ":" + t; }
+  function readCache(t){
+    if (mem[t]) return mem[t];
+    try { var v = JSON.parse(localStorage.getItem(storeKey(t)) || "null"); if (v && v.races) { mem[t] = v; return v; } } catch(e){}
+    return null;
+  }
+  function writeCache(t, races){
+    var v = { races: races, at: Date.now() }; mem[t] = v;
+    try { localStorage.setItem(storeKey(t), JSON.stringify(v)); } catch(e){}
+  }
+
   function fetchType(electionType){
     var url = API + "?startDate=" + ELECTION_DATE + "&endDate=" + ELECTION_DATE +
       "&country=US&election_type=" + electionType + "&limit=50000";
-    return fetch(url, { cache: "no-store" }).then(function(r){
+    var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var to = ctrl ? setTimeout(function(){ ctrl.abort(); }, FETCH_TIMEOUT_MS) : null;
+    return fetch(url, { cache: "no-store", signal: ctrl ? ctrl.signal : undefined }).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
-    }).then(function(j){ return j.races || []; });
+    }).then(function(j){
+      clearTimeout(to);
+      var races = slim(j.races || []);
+      writeCache(electionType, races);
+      return races;
+    }, function(e){ clearTimeout(to); throw e; });
   }
 
-  // Renvoie { byState: {AL: summary...}, totals... } selon la course affichée
-  function load(){
-    if (RACE === "governor") {
-      return fetchType("Statewide").then(function(races){
-        return races.filter(function(r){ return r.type === "Governor" && NAMES[r.province]; });
-      });
-    }
-    return fetchType("General").then(function(races){
-      if (RACE === "senate") return races.filter(function(r){ return r.type === "US Senate" && NAMES[r.province]; });
-      return races.filter(function(r){ return r.type === "House of Representatives" && NAMES[r.province]; });
-    });
+  function typeFor(race){ return race === "governor" ? "Statewide" : "General"; }
+  function pick(races){
+    var want = RACE === "governor" ? "Governor" : RACE === "senate" ? "US Senate" : "House of Representatives";
+    return races.filter(function(r){ return r.type === want; });
   }
+  function load(){ return fetchType(typeFor(RACE)).then(pick); }
 
   /* ------------------------------------------------------------------
      Mode démo : résultats fictifs pour tester le rendu
@@ -332,7 +364,7 @@
       b.type = "button"; b.setAttribute("role","tab");
       b.setAttribute("aria-selected", k === RACE ? "true" : "false");
       b.textContent = T.tabs[k];
-      b.onclick = function(){ if (k !== RACE){ RACE = k; selected = null; renderChrome(); refresh(); } };
+      b.onclick = function(){ if (k !== RACE){ RACE = k; selected = null; renderChrome(); switchRace(); } };
       tabs.appendChild(b);
     });
     $("source").innerHTML = T.source + '<a href="https://civicapi.org" target="_blank" rel="noopener">civicAPI</a>';
@@ -444,7 +476,7 @@
     $("gauge").innerHTML = html;
   }
 
-  function process(races){
+  function process(races, at){
     if (DEMO) races = demoize(races);
     var states = {}, c = { D: 0, Dp: 0, R: 0, Rp: 0, O: 0 };
 
@@ -483,21 +515,46 @@
       }
     }
     paint(states);
-    var now = new Date().toLocaleTimeString(LANG === "de" ? "de-CH" : "fr-CH", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Zurich" });
-    $("updated").textContent = T.updated(now);
+    $("updated").textContent = T.updated(hhmm(at || Date.now()));
+  }
+  function hhmm(ts){ return new Date(ts).toLocaleTimeString(LANG === "de" ? "de-CH" : "fr-CH", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Zurich" }); }
+
+  // Affiche immédiatement les dernières données connues pour la course choisie
+  function showCached(){
+    var c = readCache(typeFor(RACE));
+    if (c) { process(pick(c.races), c.at); return true; }
+    return false;
   }
 
   var timer = null, inflight = 0;
   function refresh(){
     clearTimeout(timer);
-    var id = ++inflight;
+    var id = ++inflight, delay = REFRESH_MS;
     load().then(function(races){ if (id === inflight) process(races); })
-      .catch(function(){ if (id === inflight) $("updated").innerHTML = '<span class="err">' + T.error + "</span>"; })
-      .then(function(){ timer = setTimeout(refresh, REFRESH_MS); });
+      .catch(function(){
+        if (id !== inflight) return;
+        delay = RETRY_MS;
+        var c = readCache(typeFor(RACE));
+        $("updated").innerHTML = '<span class="err">' + (c ? T.stale(hhmm(c.at)) : T.error) + "</span>";
+      })
+      .then(function(){ if (id === inflight) timer = setTimeout(refresh, delay); });
   }
+  // Sans données en cache pour la nouvelle course : carte neutre (gris) le temps du chargement
+  function resetMap(){
+    lastStates = {};
+    document.querySelectorAll(".st").forEach(function(g){
+      g.classList.remove("none");
+      g.querySelector(".hex").style.fill = "";
+      g.querySelector(".lab").setAttribute("class", "lab dark");
+    });
+    $("gauge").innerHTML = "";
+    $("updated").textContent = "";
+  }
+  function switchRace(){ if (!showCached()) resetMap(); refresh(); }
 
   renderChrome();
   buildMap();
+  showCached();
   refresh();
   document.addEventListener("visibilitychange", function(){ if (!document.hidden) refresh(); });
 })();
