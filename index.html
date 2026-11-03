@@ -62,7 +62,9 @@
   .tabs button{font:inherit;font-size:14px;font-weight:700;border:2px solid var(--ink);background:var(--bg);color:var(--ink);
     padding:7px 12px;border-radius:999px;cursor:pointer}
   .tabs button[aria-selected="true"]{background:var(--ink);color:var(--on-ink)}
-  .layout-home .tabs{display:none}
+  /* Home : onglets compacts sur une seule ligne */
+  .layout-home .tabs{margin:0 0 10px;gap:4px;flex-wrap:nowrap}
+  .layout-home .tabs button{font-size:13px;padding:5px 10px;border-width:1.5px;white-space:nowrap}
 
   /* Jauge */
   .gauge-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:6px}
@@ -191,6 +193,7 @@
       title: "Midterms 2026",
       sub: "Résultats en direct des élections de mi-mandat aux États-Unis, État par État.",
       tabs: { senate: "Sénat", house: "Chambre des représentants", governor: "Gouverneurs" },
+      tabsShort: { senate: "Sénat", house: "Chambre", governor: "Gouverneurs" },
       homeTitle: { senate: "Midterms : le Sénat", house: "Midterms : la Chambre", governor: "Midterms : les gouverneurs" },
       dem: "Démocrates", rep: "Républicains", oth: "Autres",
       seats: "sièges", races: "élections",
@@ -219,6 +222,7 @@
       title: "Midterms 2026",
       sub: "Live-Resultate der US-Zwischenwahlen, Bundesstaat für Bundesstaat.",
       tabs: { senate: "Senat", house: "Repräsentantenhaus", governor: "Gouverneure" },
+      tabsShort: { senate: "Senat", house: "Repräsentantenhaus", governor: "Gouverneure" },
       homeTitle: { senate: "Midterms: der Senat", house: "Midterms: das Repräsentantenhaus", governor: "Midterms: die Gouverneure" },
       dem: "Demokraten", rep: "Republikaner", oth: "Andere",
       seats: "Sitze", races: "Wahlen",
@@ -401,7 +405,7 @@
       var b = document.createElement("button");
       b.type = "button"; b.setAttribute("role","tab");
       b.setAttribute("aria-selected", k === RACE ? "true" : "false");
-      b.textContent = T.tabs[k];
+      b.textContent = (HOME ? T.tabsShort : T.tabs)[k];
       b.onclick = function(){ if (k !== RACE){ RACE = k; selected = null; renderChrome(); switchRace(); } };
       tabs.appendChild(b);
     });
