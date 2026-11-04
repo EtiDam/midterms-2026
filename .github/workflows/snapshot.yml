@@ -1,7 +1,9 @@
 name: Instantanés civicAPI
+# Un seul passage tourne en continu ~5 h 45 (récupération toutes les ~45 s).
+# Le déclenchement planifié ne sert que de relance si le passage en cours s'arrête.
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "7,37 * * * *"
   workflow_dispatch:
 concurrency:
   group: snapshot
@@ -11,17 +13,22 @@ permissions:
 jobs:
   snapshot:
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
-      - name: Récupérer les résultats toutes les minutes pendant 5 minutes
+      - name: Récupérer les résultats en continu
         run: |
           git config user.name "midterms-bot"
           git config user.email "midterms-bot@users.noreply.github.com"
-          for i in 1 2 3 4 5; do
-            python3 scripts/snapshot.py
+          end=$(( $(date +%s) + 345*60 ))
+          while [ "$(date +%s)" -lt "$end" ]; do
+            start=$(date +%s)
+            python3 scripts/snapshot.py || true
             if [ -n "$(git status --porcelain data)" ]; then
-              git add data && git commit -q -m "Instantané résultats $(date -u +%H:%M)" && git pull -q --rebase && git push -q || true
+              git add data && git commit -q -m "Instantané résultats $(date -u +%H:%M:%S)" || true
+              git pull -q --rebase -X theirs || true
+              git push -q || true
             fi
-            [ $i -lt 5 ] && sleep 60
+            elapsed=$(( $(date +%s) - start ))
+            [ "$elapsed" -lt 45 ] && sleep $(( 45 - elapsed ))
           done

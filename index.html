@@ -674,6 +674,7 @@
   function refresh(){
     clearTimeout(timer);
     var id = ++inflight, delay = REFRESH_MS;
+    showSnap();   // l'instantané du robot (petit, sur notre site) part en parallèle du direct civicAPI
     load().then(function(races){
         if (id === inflight) { process(races); $("map").classList.remove("loading"); }
         prefetchOther();

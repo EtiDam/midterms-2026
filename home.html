@@ -214,6 +214,7 @@
   var timer = null;
   function refresh(){
     clearTimeout(timer);
+    if (typeof showSnap === "function") showSnap();
     var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
     var to = ctrl ? setTimeout(function(){ ctrl.abort(); }, TIMEOUT_MS) : null;
     var url = API + "?startDate=" + ELECTION_DATE + "&endDate=" + ELECTION_DATE + "&country=US&election_type=General&limit=50000";

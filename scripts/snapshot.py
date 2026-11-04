@@ -23,7 +23,7 @@ def slim(races):
 
 def grab(kind):
     req = urllib.request.Request(API + kind, headers={"User-Agent": "midterms-2026-snapshot"})
-    with urllib.request.urlopen(req, timeout=60) as resp:
+    with urllib.request.urlopen(req, timeout=40) as resp:
         return json.load(resp).get("races", [])
 
 os.makedirs("data", exist_ok=True)
@@ -33,16 +33,9 @@ for kind in ("General", "Statewide"):
         if races:
             path = f"data/{kind.lower()}.json"
             body = {"races": races}
-            old = None
-            if os.path.exists(path):
-                with open(path) as f:
-                    old = json.load(f).get("races")
-            if old != races:
-                body["at"] = int(time.time() * 1000)
-                with open(path, "w") as f:
-                    json.dump(body, f, separators=(",", ":"), ensure_ascii=False)
-                print(kind, "mis à jour", len(races))
-            else:
-                print(kind, "inchangé")
+            body["at"] = int(time.time() * 1000)
+            with open(path, "w") as f:
+                json.dump(body, f, separators=(",", ":"), ensure_ascii=False)
+            print(kind, "écrit", len(races))
     except Exception as e:
         print(kind, "erreur", e)
