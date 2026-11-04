@@ -618,7 +618,9 @@
     $("gauge").innerHTML = html;
   }
 
+  var shownAt = {};
   function process(races, at){
+    shownAt[typeFor(RACE)] = at || Date.now();
     if (DEMO) races = demoize(races);
     var states = {}, c = { D: 0, Dp: 0, R: 0, Rp: 0, O: 0 };
 
@@ -679,6 +681,7 @@
       .catch(function(){
         if (id !== inflight) return;
         delay = RETRY_MS;
+        showSnap();   // civicAPI ne répond pas : on se rabat sur l'instantané publié par le robot
         var c = readCache(typeFor(RACE));
         // Échec silencieux : si on a déjà des résultats, on garde simplement l'heure de leur dernière mise à jour
         if (c) $("updated").textContent = T.updated(hhmm(c.at));
@@ -710,7 +713,25 @@
     $("updated").textContent = T.loading;
     $("map").classList.add("loading");
   }
-  function switchRace(){ if (!showCached()) resetMap(); refresh(); }
+  // Instantané léger publié sur notre propre site par le robot GitHub (toutes les minutes environ) :
+  // s'affiche en une fraction de seconde, même quand civicAPI est saturé ou sur iPhone sans cache.
+  function snap(t){
+    return fetch("data/" + t.toLowerCase() + ".json", { cache: "no-cache" })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if (!j || !j.races || !j.races.length) return null;
+        var c = mem[t], at = j.at || 0;
+        if (!c || at > c.at) mem[t] = { races: j.races, at: at };
+        return mem[t];
+      }).catch(function(){ return null; });
+  }
+  function showSnap(){
+    var t = typeFor(RACE);
+    snap(t).then(function(c){
+      if (c && typeFor(RACE) === t && c.at > (shownAt[t] || 0)) { process(pick(c.races), c.at); $("map").classList.remove("loading"); }
+    });
+  }
+  function switchRace(){ if (!showCached()) { resetMap(); showSnap(); } refresh(); }
 
   // Thème imposé par la page parente (ex. site desktop en mode sombre) :
   // la page Blick peut envoyer iframe.contentWindow.postMessage({ midtermsTheme: "dark" }, "*")
@@ -730,7 +751,7 @@
 
   renderChrome();
   buildMap();
-  if (!showCached()) $("map").classList.add("loading");
+  if (!showCached()) { $("map").classList.add("loading"); showSnap(); }
   refresh();
   document.addEventListener("visibilitychange", function(){ if (!document.hidden) refresh(); });
 })();

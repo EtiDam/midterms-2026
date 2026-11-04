@@ -1,0 +1,27 @@
+name: Instantanés civicAPI
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Récupérer les résultats toutes les minutes pendant 5 minutes
+        run: |
+          git config user.name "midterms-bot"
+          git config user.email "midterms-bot@users.noreply.github.com"
+          for i in 1 2 3 4 5; do
+            python3 scripts/snapshot.py
+            if [ -n "$(git status --porcelain data)" ]; then
+              git add data && git commit -q -m "Instantané résultats $(date -u +%H:%M)" && git pull -q --rebase && git push -q || true
+            fi
+            [ $i -lt 5 ] && sleep 60
+          done

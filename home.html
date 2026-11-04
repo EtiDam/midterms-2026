@@ -219,13 +219,20 @@
     var url = API + "?startDate=" + ELECTION_DATE + "&endDate=" + ELECTION_DATE + "&country=US&election_type=General&limit=50000";
     fetch(url, { cache: "no-store", signal: ctrl ? ctrl.signal : undefined })
       .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(function(j){ clearTimeout(to); var races = slim(j.races || []); writeCache(races); render(races); timer = setTimeout(refresh, REFRESH_MS); })
-      .catch(function(){ clearTimeout(to); var c = readCache(); if (c) setMeta(T.updated(hhmm(c.at))); timer = setTimeout(refresh, RETRY_MS); });
+      .then(function(j){ clearTimeout(to); var races = slim(j.races || []); writeCache(races); shownAt = Date.now(); render(races); timer = setTimeout(refresh, REFRESH_MS); })
+      .catch(function(){ clearTimeout(to); var c = readCache(); if (c) setMeta(T.updated(hhmm(c.at))); showSnap(); timer = setTimeout(refresh, RETRY_MS); });
   }
 
-  var cached = readCache();
+  var cached = readCache(), shownAt = cached ? cached.at : 0;
   if (cached) render(cached.races, cached.at);
   else { render([]); setMeta(T.loading); }
+  // Instantané publié sur notre site par le robot GitHub : affichage immédiat, même sur iPhone
+  function showSnap(){
+    fetch("data/general.json", { cache: "no-cache" }).then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ if (j && j.races && j.races.length && (j.at || 0) > shownAt) { shownAt = j.at; render(j.races, j.at); } })
+      .catch(function(){});
+  }
+  showSnap();
   refresh();
   document.addEventListener("visibilitychange", function(){ if (!document.hidden) refresh(); });
 })();
