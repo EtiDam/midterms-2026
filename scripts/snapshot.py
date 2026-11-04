@@ -23,7 +23,7 @@ def slim(races):
 
 def grab(kind):
     req = urllib.request.Request(API + kind, headers={"User-Agent": "midterms-2026-snapshot"})
-    with urllib.request.urlopen(req, timeout=40) as resp:
+    with urllib.request.urlopen(req, timeout=25) as resp:
         return json.load(resp).get("races", [])
 
 os.makedirs("data", exist_ok=True)

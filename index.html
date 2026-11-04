@@ -358,8 +358,8 @@
      données connues (mémoire, puis navigateur du lecteur), puis se met à jour
      dès que civicAPI répond. Utile quand l'API est lente ou saturée.
   ------------------------------------------------------------------ */
-  var FETCH_TIMEOUT_MS = 20000;   // on abandonne une requête au-delà de 20 s
-  var RETRY_MS = 15000;           // en cas d'échec, nouvel essai après 15 s
+  var FETCH_TIMEOUT_MS = 15000;   // on abandonne une requête au-delà de 15 s
+  var RETRY_MS = 8000;            // en cas d'échec, nouvel essai après 8 s (civicAPI est intermittent)
   var KEEP = { "US Senate": 1, "House of Representatives": 1, "Governor": 1 };
   var mem = {}, lastSaved = {};                    // { General: {races, at}, Statewide: {races, at} }
 

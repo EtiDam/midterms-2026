@@ -23,12 +23,14 @@ jobs:
           end=$(( $(date +%s) + 345*60 ))
           while [ "$(date +%s)" -lt "$end" ]; do
             start=$(date +%s)
-            python3 scripts/snapshot.py || true
+            out=$(python3 scripts/snapshot.py 2>&1 || true); echo "$out"
             if [ -n "$(git status --porcelain data)" ]; then
               git add data && git commit -q -m "Instantané résultats $(date -u +%H:%M:%S)" || true
               git pull -q --rebase -X theirs || true
               git push -q || true
             fi
+            # civicAPI tombe souvent ce soir : nouvel essai après 8 s en cas d'échec, sinon toutes les 30 s
+            if echo "$out" | grep -q erreur; then pause=8; else pause=30; fi
             elapsed=$(( $(date +%s) - start ))
-            [ "$elapsed" -lt 45 ] && sleep $(( 45 - elapsed ))
+            [ "$elapsed" -lt "$pause" ] && sleep $(( pause - elapsed ))
           done
