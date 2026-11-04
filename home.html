@@ -16,31 +16,26 @@
     demo  = 1                     (chiffres fictifs pour tester)
 -->
 <style>
-  /* Ligne graphique Blick : celle de la carte midterms et du module US 2024 */
+  /* Proposition 3 « Bandeau rouge Blick » : fond fixe, identique sur le site clair et sombre */
   :root{
-    --d:#1b73a5; --r:#e20000;
-    --pending:#cfcfcf;
-    --ink:#111; --muted:#6b6b6b; --line:#d9d9d9; --bg:#fff; --on-ink:#fff;
+    --d:#1b73a5; --r:#e20000; --brand:#e20000;
+    --pending:#d6d6d6;
+    --ink:#111; --muted:#666; --line:#ddd; --bg:#f6f5f3; --on-ink:#fff;
     --d-text:#1b73a5; --r-text:#e20000; --hatch:rgba(255,255,255,.55);
     --font:"BlickVariable","GT America",Arial,Helvetica,sans-serif;
-  }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      --pending:#4a4a4a; --ink:#f2f2f2; --muted:#a0a0a0; --line:#333; --bg:#111; --on-ink:#111;
-      --d-text:#5fb6e0; --r-text:#ff4a4a; --hatch:rgba(17,17,17,.55); color-scheme:dark;
-    }
-  }
-  :root[data-theme="dark"]{
-    --pending:#4a4a4a; --ink:#f2f2f2; --muted:#a0a0a0; --line:#333; --bg:#111; --on-ink:#111;
-    --d-text:#5fb6e0; --r-text:#ff4a4a; --hatch:rgba(17,17,17,.55); color-scheme:dark;
+    color-scheme:light;
   }
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-text-size-adjust:100%}
-  .wrap{max-width:1100px;margin:0 auto;padding:14px 16px 16px}
 
-  .kicker{font-size:24px;line-height:1.1;font-weight:800;letter-spacing:-.01em;margin:0 0 14px}
-  .kicker .live{display:inline-block;vertical-align:4px;margin-left:8px;font-size:11px;font-weight:800;letter-spacing:.04em;
-    color:#fff;background:#e20000;border-radius:3px;padding:2px 6px;text-transform:uppercase}
+  .redhead{background:var(--brand);color:#fff}
+  .redhead .in{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px}
+  .kicker{font-size:22px;line-height:1.1;font-weight:800;letter-spacing:-.01em;margin:0}
+  .live{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;letter-spacing:.04em;
+    color:var(--brand);background:#fff;border-radius:3px;padding:2px 6px;text-transform:uppercase}
+  .live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--brand);animation:blink 1.6s ease-in-out infinite}
+  @keyframes blink{50%{opacity:.25}}
+  .wrap{max-width:1100px;margin:0 auto;padding:14px 16px 14px}
 
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 32px}
   .col{min-width:0;border-top:2px solid var(--ink);padding-top:10px}
@@ -73,23 +68,24 @@
     border-top:1px solid var(--line);padding-top:10px}
   .foot .meta{font-size:12px;color:var(--muted)}
   .foot .meta a{color:inherit}
-  .btn{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:var(--on-ink);text-decoration:none;
-    font-weight:700;font-size:14px;padding:8px 16px;border-radius:999px;white-space:nowrap;border:2px solid var(--ink)}
-  .btn:hover{background:var(--bg);color:var(--ink)}
+  .btn{display:inline-flex;align-items:center;gap:8px;background:var(--brand);color:#fff;text-decoration:none;
+    font-weight:700;font-size:14px;padding:8px 16px;border-radius:999px;white-space:nowrap;border:2px solid var(--brand)}
+  .btn:hover{background:#fff;color:var(--brand)}
   .btn svg{width:16px;height:16px}
 
   @media (max-width:700px){
-    .kicker{font-size:20px;margin-bottom:10px}
+    .kicker{font-size:20px}
     .cols{grid-template-columns:1fr;gap:16px}
     .side .n{font-size:30px}
     .btn{width:100%;justify-content:center}
   }
-  @media (prefers-reduced-motion:reduce){ .bar span{transition:none} }
+  @media (prefers-reduced-motion:reduce){ .bar span{transition:none} .live::before{animation:none} }
 </style>
 </head>
 <body>
+<div class="redhead"><div class="in"><p class="kicker">Midterms 2026</p><span class="live">Live</span></div></div>
 <div class="wrap">
-  <p class="kicker">Midterms 2026<span class="live">Live</span></p>
+  
   <div class="cols">
     <section class="col" id="house"></section>
     <section class="col" id="senate"></section>
@@ -115,7 +111,7 @@
   var URL_ARTICLE = qs.get("url") || "#";
   var THEME = qs.get("theme");
   document.documentElement.lang = LANG;
-  if (THEME === "dark" || THEME === "light") document.documentElement.setAttribute("data-theme", THEME);
+  // Fond fixe : le paramètre theme et les messages de thème sont ignorés
   window.addEventListener("message", function(e){
     var t = e && e.data && e.data.midtermsTheme;
     if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
