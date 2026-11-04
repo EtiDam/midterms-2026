@@ -117,6 +117,8 @@
   /* Détail d'un État */
   /* Hauteur fixe : le bloc ne change jamais de taille d'un État à l'autre (pas de saut de page ni d'iframe) */
   .detail{border-top:2px solid var(--ink);padding:12px 0 0;height:190px;overflow:hidden}
+  /* Avant la première interaction : bloc réduit à une ligne (pas d'espace vide sous la carte) */
+  .detail.collapsed{height:auto;padding-bottom:4px}
   .detail h2{font-size:18px;line-height:22px;height:22px;margin:0 0 2px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .detail .meta{font-size:12px;line-height:16px;height:16px;color:var(--muted);margin-bottom:10px}
   .detail .hint{font-size:14px;line-height:20px;color:var(--muted);margin:0}
@@ -417,6 +419,7 @@
       '<span><i style="background:var(--pending)"></i>' + L.pending + '</span>' +
       '<span><i style="background:var(--norace);border:1px dashed var(--norace-line)"></i>' + L.none + '</span>';
     $("detail").innerHTML = '<p class="hint">' + T.hint + '</p>';
+    if (!detailOpened) $("detail").classList.add("collapsed");
   }
 
   function buildMap(){
@@ -505,7 +508,12 @@
     nb.textContent = h.total;
   }
 
+  // Le bloc s'ouvre à la première interaction, puis garde sa hauteur fixe pour toujours
+  var detailOpened = false;
+  function openDetail(){ if (!detailOpened) { detailOpened = true; $("detail").classList.remove("collapsed"); } }
+
   function showDetail(st){
+    openDetail();
     var s = lastStates[st] || { status: "none" }, html = "<h2>" + stateName(st) + "</h2>";
     if (RACE === "house") {
       if (!s.house) { $("detail").innerHTML = html + '<p class="hint">' + T.pending + "</p>"; return; }
