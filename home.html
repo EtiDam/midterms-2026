@@ -108,7 +108,8 @@
   var qs = new URLSearchParams(location.search);
   var LANG = qs.get("lang") === "de" ? "de" : "fr";
   var DEMO = qs.get("demo") === "1";
-  var URL_ARTICLE = qs.get("url") || "#";
+  // Article complet par défaut (utilisé si l'URL ne précise pas ?url=)
+  var URL_ARTICLE = qs.get("url") || "https://www.blick.ch/fr/monde/cartes-interactives-suivez-les-resultats-des-midterms-2026-en-direct/72h2lnp";
   var THEME = qs.get("theme");
   document.documentElement.lang = LANG;
   // Fond fixe : le paramètre theme et les messages de thème sont ignorés
