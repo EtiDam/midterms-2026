@@ -4,9 +4,29 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
-  // L'ancien lien home (?layout=home) affiche désormais le bandeau compact
+  // L'ancien lien home (?layout=home) affiche le bandeau compact de home.html,
+  // SANS changer d'adresse : la page Blick identifie l'iframe par son URL pour ajuster sa hauteur.
   if (new URLSearchParams(location.search).get("layout") === "home") {
-    location.replace("home.html" + location.search);
+    window.__HOME_BANDEAU = true;
+    document.write('<style id="hb">body>*{display:none!important}</style>');   // rien d\'affiché (hauteur 0) avant le bandeau
+    fetch("home.html", { cache: "no-cache" }).then(function(r){ return r.text(); }).then(function(t){
+      var d = new DOMParser().parseFromString(t, "text/html");
+      function apply(){
+        document.title = d.title;
+        var olds = document.head.querySelectorAll("style"); for (var k = 0; k < olds.length; k++) olds[k].remove();
+        var st = d.head.querySelectorAll("style"); for (var k2 = 0; k2 < st.length; k2++) document.head.appendChild(st[k2]);
+        var scripts = Array.prototype.slice.call(d.body.querySelectorAll("script"));
+        scripts.forEach(function(s){ s.remove(); });
+        document.body.className = "";
+        document.body.innerHTML = d.body.innerHTML;   // même élément <body> : l'observateur de hauteur Blick reste branché
+        scripts.forEach(function(s){
+          if (s.src) return;                            // le script Blick est déjà chargé par cette page
+          var n = document.createElement("script"); n.textContent = s.textContent; document.body.appendChild(n);
+        });
+        document.documentElement.removeAttribute("data-theme");
+      }
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", apply); else apply();
+    }).catch(function(){ var h = document.getElementById("hb"); if (h) h.remove(); });
   }
 </script>
 <title>Midterms 2026</title>
@@ -174,6 +194,7 @@
 <script>
 (function(){
   "use strict";
+  if (window.__HOME_BANDEAU) return;   // le bandeau home prend le relais
 
   /* ------------------------------------------------------------------
      Réglages
@@ -689,6 +710,14 @@
 
   // Thème imposé par la page parente (ex. site desktop en mode sombre) :
   // la page Blick peut envoyer iframe.contentWindow.postMessage({ midtermsTheme: "dark" }, "*")
+  // Thème du site Blick (clair/sombre) : transmis dans l'adresse (#theme=dark) puis par message CHANGE_THEME
+  var blickTheme = new URLSearchParams(location.hash.slice(1)).get("theme");
+  if (!qs.get("theme") && (blickTheme === "dark" || blickTheme === "light")) document.documentElement.setAttribute("data-theme", blickTheme);
+  window.addEventListener("message", function(e){
+    if (e && e.data && e.data.blick_event_type === "CHANGE_THEME" && (e.data.theme === "dark" || e.data.theme === "light")) {
+      document.documentElement.setAttribute("data-theme", e.data.theme);
+    }
+  });
   window.addEventListener("message", function(e){
     var t = e && e.data && e.data.midtermsTheme;
     if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
