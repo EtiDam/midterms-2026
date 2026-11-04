@@ -2,8 +2,6 @@ name: Instantanés civicAPI
 # Un seul passage tourne en continu ~5 h 45 (récupération toutes les ~45 s).
 # Le déclenchement planifié ne sert que de relance si le passage en cours s'arrête.
 on:
-  schedule:
-    - cron: "7,37 * * * *"
   workflow_dispatch:
 concurrency:
   group: snapshot
