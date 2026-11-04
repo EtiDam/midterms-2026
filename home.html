@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Midterms 2026 · Home</title>
+<!--
+  Bandeau compact « Midterms 2026 » pour la homepage : Chambre + Sénat, sans carte,
+  avec un bouton vers l'article complet.
+  Données : civicAPI (https://civicapi.org) — attribution obligatoire.
+
+  Paramètres d'URL :
+    url   = adresse de l'article complet (ouvert dans la page, pas dans l'iframe)
+    lang  = fr | de
+    theme = dark | light          (défaut : suit l'appareil)
+    demo  = 1                     (chiffres fictifs pour tester)
+-->
+<style>
+  :root{
+    --d:#1b5fa8; --r:#b5321e;
+    --pending:#d9d9d9;
+    --ink:#1d1d1f; --muted:#6b6b6b; --line:#d9d9d9; --bg:#fff;
+    --d-text:#1b5fa8; --r-text:#b5321e;
+    --font:"BlickVariable","GT America",Arial,Helvetica,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --pending:#3d3d3d; --ink:#f2f2f2; --muted:#a0a0a0; --line:#3a3a3a; --bg:#111;
+      --d-text:#5fb6e0; --r-text:#ff6a52; color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --pending:#3d3d3d; --ink:#f2f2f2; --muted:#a0a0a0; --line:#3a3a3a; --bg:#111;
+    --d-text:#5fb6e0; --r-text:#ff6a52; color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-text-size-adjust:100%}
+  .wrap{max-width:1100px;margin:0 auto;padding:18px 16px 16px}
+
+  .kicker{text-align:center;font-size:26px;font-weight:900;letter-spacing:-.01em;margin:0 0 18px}
+  .kicker .y2{color:var(--d-text)} .kicker .y6{color:var(--r-text)}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  .col{padding:0 32px;min-width:0}
+  .col:first-child{padding-left:0;border-right:1px solid var(--line)}
+  .col:last-child{padding-right:0}
+  .col h2{margin:0 0 14px;font-size:21px;font-weight:800;display:flex;align-items:center;gap:6px}
+  .col h2 a{color:inherit;text-decoration:none}
+  .col h2 a:hover{text-decoration:underline}
+  .col h2 svg{width:14px;height:14px}
+
+  .score{display:flex;justify-content:space-between;align-items:baseline;gap:8px;position:relative;margin-bottom:8px;font-size:17px}
+  .score b{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+  .score .d b{color:var(--d-text);margin-left:4px} .score .r b{color:var(--r-text);margin-right:4px}
+  .score .maj{position:absolute;transform:translateX(-50%);font-size:12px;color:var(--muted);top:2px}
+
+  .bar{position:relative;display:flex;gap:6px;height:14px}
+  .bar span{height:100%;border-radius:3px;transition:flex-basis .5s ease}
+  .bar .seg-d{background:var(--d)} .bar .seg-r{background:var(--r)}
+  .bar .seg-p{background:var(--pending);flex:1 1 auto}
+  .bar .hd{background:repeating-linear-gradient(-55deg,var(--d) 0 4px,#1d1d1f 4px 7px)}
+  .bar .hr{background:repeating-linear-gradient(-55deg,var(--r) 0 4px,#1d1d1f 4px 7px)}
+  .bar .tick{position:absolute;top:-10px;bottom:-10px;width:2px;background:var(--ink);border-radius:0}
+
+  .legend{margin-top:16px;display:grid;gap:8px;font-size:15px;color:var(--muted)}
+  .legend span{display:flex;align-items:center;gap:10px}
+  .legend i{width:15px;height:15px;border-radius:2px;flex:none;background:var(--pending)}
+  .legend i.hatch{background:repeating-linear-gradient(-55deg,var(--muted) 0 2px,transparent 2px 4px);box-shadow:inset 0 0 0 1px var(--muted)}
+
+  .foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px 16px;margin-top:22px}
+  .foot .meta{font-size:14px;color:var(--muted)}
+  .foot .meta a{color:inherit}
+  .btn{display:inline-flex;align-items:center;gap:10px;border:1.5px solid var(--ink);color:var(--ink);text-decoration:none;
+    font-weight:800;font-size:16px;padding:10px 20px;border-radius:999px;white-space:nowrap}
+  .btn:hover{background:var(--ink);color:var(--bg)}
+  .btn svg{width:18px;height:18px}
+
+  @media (max-width:700px){
+    .kicker{font-size:22px;margin-bottom:12px}
+    .cols{grid-template-columns:1fr;gap:18px}
+    .col,.col:first-child,.col:last-child{padding:0;border:0}
+    .col:first-child{padding-bottom:18px;border-bottom:1px solid var(--line)}
+    .col h2{font-size:19px;margin-bottom:10px}
+    .legend{margin-top:12px;font-size:14px}
+    .foot{margin-top:16px}
+    .btn{width:100%;justify-content:center}
+  }
+  @media (prefers-reduced-motion:reduce){ .bar span{transition:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">MIDTERMS <span class="y2">20</span><span class="y6">26</span></p>
+  <div class="cols">
+    <section class="col" id="house"></section>
+    <section class="col" id="senate"></section>
+  </div>
+  <div class="foot">
+    <span class="meta" id="meta"></span>
+    <a class="btn" id="cta" target="_top"></a>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var ELECTION_DATE = "2026-11-03";
+  var API = "https://civicapi.org/api/v2/race/search";
+  var REFRESH_MS = 60000, RETRY_MS = 15000, TIMEOUT_MS = 20000;
+  // Sièges du Sénat non renouvelés en 2026 (indépendants King et Sanders comptés côté D)
+  var SENATE_HOLDOVER = { D: 34, R: 31 };
+
+  var qs = new URLSearchParams(location.search);
+  var LANG = qs.get("lang") === "de" ? "de" : "fr";
+  var DEMO = qs.get("demo") === "1";
+  var URL_ARTICLE = qs.get("url") || "#";
+  var THEME = qs.get("theme");
+  document.documentElement.lang = LANG;
+  if (THEME === "dark" || THEME === "light") document.documentElement.setAttribute("data-theme", THEME);
+  window.addEventListener("message", function(e){
+    var t = e && e.data && e.data.midtermsTheme;
+    if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
+    else if (t === "auto") document.documentElement.removeAttribute("data-theme");
+  });
+
+  var T = {
+    fr: { house: "Chambre des représentants", senate: "Sénat", dem: "Démocrates", rep: "Républicains",
+      left: function(n){ return "Il reste " + n + " siège" + (n > 1 ? "s" : "") + " à pourvoir"; },
+      notUp: function(n){ return n + " sièges non renouvelés cette année"; },
+      updated: function(t){ return "Mis à jour à " + t.replace(":", " h ") + " - Source : "; },
+      loading: "Chargement des résultats… - Source : ",
+      cta: "Voir tous les résultats" },
+    de: { house: "Repräsentantenhaus", senate: "Senat", dem: "Demokraten", rep: "Republikaner",
+      left: function(n){ return "Noch " + n + " Sitz" + (n > 1 ? "e" : "") + " offen"; },
+      notUp: function(n){ return n + " Sitze stehen dieses Jahr nicht zur Wahl"; },
+      updated: function(t){ return "Aktualisiert um " + t + " Uhr - Quelle: "; },
+      loading: "Resultate werden geladen… - Quelle: ",
+      cta: "Alle Resultate" }
+  }[LANG];
+
+  var ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg>';
+  var CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
+  var $ = function(id){ return document.getElementById(id); };
+  var cta = $("cta");
+  cta.href = URL_ARTICLE; cta.innerHTML = T.cta + ARROW;
+
+  function partyKey(p){ p = (p || "").toLowerCase(); return p.indexOf("democrat") >= 0 ? "D" : p.indexOf("republican") >= 0 ? "R" : "O"; }
+
+  // Comme Le Monde : on ne compte que les sièges attribués (vainqueur annoncé)
+  function count(races){
+    var c = { D: 0, R: 0, O: 0, n: races.length };
+    races.forEach(function(r){
+      var w = (r.candidates || []).filter(function(x){ return x.winner; })[0];
+      if (w) c[partyKey(w.party)]++;
+    });
+    return c;
+  }
+
+  function block(id, title, c, total, majority, hold){
+    var pct = function(n){ return (n / total * 100).toFixed(3) + "%"; };
+    var dTot = c.D + (hold ? hold.D : 0), rTot = c.R + (hold ? hold.R : 0);
+    var n = c.n || (hold ? 35 : 435);   // avant le premier chargement : nombre de sièges en jeu
+    var left = n - c.D - c.R - c.O;
+    var seg = function(cls, n){ return n > 0 ? '<span class="' + cls + '" style="flex:0 0 ' + pct(n) + '"></span>' : ""; };
+    var html =
+      '<h2><a href="' + URL_ARTICLE + '" target="_top">' + title + "</a>" + CHEV + "</h2>" +
+      '<div class="score"><span class="d">' + T.dem + "<b>" + dTot + "</b></span>" +
+        '<span class="maj" style="left:' + pct(majority) + '">' + majority + "</span>" +
+        '<span class="r"><b>' + rTot + "</b>" + T.rep + "</span></div>" +
+      '<div class="bar">' +
+        (hold ? seg("hd", hold.D) : "") + seg("seg-d", c.D) +
+        '<span class="seg-p"></span>' +
+        seg("seg-r", c.R) + (hold ? seg("hr", hold.R) : "") +
+        '<span class="tick" style="left:calc(' + pct(majority) + ' - 1px)"></span>' +
+      "</div>" +
+      '<div class="legend"><span><i></i>' + T.left(left) + "</span>" +
+        (hold ? '<span><i class="hatch"></i>' + T.notUp(hold.D + hold.R) + "</span>" : "") + "</div>";
+    $(id).innerHTML = html;
+  }
+
+  function hhmm(ts){ return new Date(ts).toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Zurich" }); }
+  function setMeta(text){ $("meta").innerHTML = text + '<a href="https://civicapi.org" target="_blank" rel="noopener">civicAPI</a>'; }
+
+  function render(races, at){
+    if (DEMO) races = demoize(races);
+    var house = races.filter(function(r){ return r.type === "House of Representatives"; });
+    var senate = races.filter(function(r){ return r.type === "US Senate"; });
+    // Seuils repris de la présentation du Monde : 218 à la Chambre, 50 au Sénat
+    block("house", T.house, count(house), 435, 218, null);
+    block("senate", T.senate, count(senate), 100, 50, SENATE_HOLDOVER);
+    setMeta(T.updated(hhmm(at || Date.now())));
+  }
+
+  function demoize(races){
+    var s = 12345, rnd = function(){ s = (s * 9301 + 49297) % 233280; return s / 233280; };
+    return races.map(function(r){
+      var c = JSON.parse(JSON.stringify(r)), win = rnd() < .6, d = rnd() < .5;
+      (c.candidates || []).forEach(function(k){ k.winner = win && partyKey(k.party) === (d ? "D" : "R"); });
+      return c;
+    });
+  }
+
+  // Cache partagé avec la carte complète (même domaine) : affichage immédiat
+  var KEY = "midterms2026:" + ELECTION_DATE + ":General";
+  function readCache(){ try { var v = JSON.parse(localStorage.getItem(KEY) || "null"); return v && v.races ? v : null; } catch(e){ return null; } }
+  function writeCache(races){ try { localStorage.setItem(KEY, JSON.stringify({ races: races, at: Date.now() })); } catch(e){} }
+  var NOT_STATE = ["US","PR","GU","VI","AS","MP","DC"];
+  function slim(races){
+    var keep = { "US Senate": 1, "House of Representatives": 1, "Governor": 1 };
+    return races.filter(function(r){ return keep[r.type] && r.province && NOT_STATE.indexOf(r.province) < 0; }).map(function(r){
+      return { type: r.type, province: r.province, district: r.district, percent_reporting: r.percent_reporting,
+        candidates: (r.candidates || []).map(function(c){ return { name: c.name, party: c.party, votes: c.votes, percent: c.percent, winner: c.winner }; }) };
+    });
+  }
+
+  var timer = null;
+  function refresh(){
+    clearTimeout(timer);
+    var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var to = ctrl ? setTimeout(function(){ ctrl.abort(); }, TIMEOUT_MS) : null;
+    var url = API + "?startDate=" + ELECTION_DATE + "&endDate=" + ELECTION_DATE + "&country=US&election_type=General&limit=50000";
+    fetch(url, { cache: "no-store", signal: ctrl ? ctrl.signal : undefined })
+      .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(j){ clearTimeout(to); var races = slim(j.races || []); writeCache(races); render(races); timer = setTimeout(refresh, REFRESH_MS); })
+      .catch(function(){ clearTimeout(to); var c = readCache(); if (c) setMeta(T.updated(hhmm(c.at))); timer = setTimeout(refresh, RETRY_MS); });
+  }
+
+  var cached = readCache();
+  if (cached) render(cached.races, cached.at);
+  else { render([]); setMeta(T.loading); }
+  refresh();
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden) refresh(); });
+})();
+</script>
+<script src="https://www.blick.ch/assets/iframeHeightAdjustment.js"></script>
+</body>
+</html>
