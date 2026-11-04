@@ -27,8 +27,8 @@
     --d:#1b73a5; --d-prov:#4eaace;
     --r:#e20000; --r-prov:#fb8163;
     --o:#8a8a8a; --o-prov:#c5c5c5;
-    --pending:#cfcfcf; --norace:#ffffff; --norace-line:#c9c9c9;
-    --ink:#111; --muted:#6b6b6b; --line:#d9d9d9; --bg:#fff;
+    --pending:#d6d6d6; --norace:#fff; --norace-line:#c9c9c9;
+    --ink:#111; --muted:#666; --line:#ddd; --bg:#f6f5f3; --brand:#e20000; --tab-bg:#fff;
     --on-ink:#fff; --track:#eee; --lab-pending:#4a4a4a; --lab-faint:#c9c9c9; --d-text:#1b73a5; --r-text:#e20000;
     --font:"BlickVariable","GT America",Arial,Helvetica,sans-serif;
   }
@@ -36,14 +36,14 @@
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
       --pending:#4a4a4a; --norace:transparent; --norace-line:#555;
-      --ink:#f2f2f2; --muted:#a0a0a0; --line:#333; --bg:#111;
+      --ink:#f2f2f2; --muted:#a0a0a0; --line:#333; --bg:#111; --tab-bg:#111;
       --on-ink:#111; --track:#2a2a2a; --lab-pending:#e6e6e6; --lab-faint:#666;
       --o:#9a9a9a; --d-text:#5fb6e0; --r-text:#ff4a4a; color-scheme:dark;
     }
   }
   :root[data-theme="dark"]{
     --pending:#4a4a4a; --norace:transparent; --norace-line:#555;
-    --ink:#f2f2f2; --muted:#a0a0a0; --line:#333; --bg:#111;
+    --ink:#f2f2f2; --muted:#a0a0a0; --line:#333; --bg:#111; --tab-bg:#111;
     --on-ink:#111; --track:#2a2a2a; --lab-pending:#e6e6e6; --lab-faint:#666;
     --o:#9a9a9a; --d-text:#5fb6e0; --r-text:#ff4a4a; color-scheme:dark;
   }
@@ -53,13 +53,22 @@
   .wrap{max-width:1000px;margin:0 auto;padding:16px}
   .layout-home .wrap{padding:8px 12px}
 
-  h1{font-size:28px;line-height:1.1;margin:0 0 4px;font-weight:800;letter-spacing:-.01em}
+  /* En-tête rouge Blick (comme le bandeau de la home) */
+  .redhead{background:var(--brand);color:#fff}
+  .redhead .in{max-width:1000px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px}
+  h1{font-size:24px;line-height:1.1;margin:0;font-weight:800;letter-spacing:-.01em}
+  .live{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;letter-spacing:.04em;
+    color:var(--brand);background:#fff;border-radius:3px;padding:2px 6px;text-transform:uppercase}
+  .live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--brand);animation:blink 1.6s ease-in-out infinite}
+  @keyframes blink{50%{opacity:.25}}
+  @media (prefers-reduced-motion:reduce){ .live::before{animation:none} }
   .sub{color:var(--muted);font-size:14px;margin:0 0 14px}
-  .layout-home h1{font-size:20px}
+  .layout-home h1{font-size:19px}
+  .layout-home .redhead .in{padding:8px 12px}
   .layout-home .sub{display:none}
 
   .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px}
-  .tabs button{font:inherit;font-size:14px;font-weight:700;border:2px solid var(--ink);background:var(--bg);color:var(--ink);
+  .tabs button{font:inherit;font-size:14px;font-weight:700;border:2px solid var(--ink);background:var(--tab-bg);color:var(--ink);
     padding:7px 12px;border-radius:999px;cursor:pointer}
   .tabs button[aria-selected="true"]{background:var(--ink);color:var(--on-ink)}
   /* Home : onglets compacts sur une seule ligne */
@@ -139,8 +148,8 @@
 </style>
 </head>
 <body>
+<div class="redhead"><div class="in"><h1 id="title"></h1><span class="live">Live</span></div></div>
 <div class="wrap">
-  <h1 id="title"></h1>
   <p class="sub" id="sub"></p>
   <div class="tabs" role="tablist" id="tabs"></div>
 
