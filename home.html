@@ -16,73 +16,72 @@
     demo  = 1                     (chiffres fictifs pour tester)
 -->
 <style>
+  /* Ligne graphique Blick : celle de la carte midterms et du module US 2024 */
   :root{
-    --d:#1b5fa8; --r:#b5321e;
-    --pending:#d9d9d9;
-    --ink:#1d1d1f; --muted:#6b6b6b; --line:#d9d9d9; --bg:#fff;
-    --d-text:#1b5fa8; --r-text:#b5321e;
+    --d:#1b73a5; --r:#e20000;
+    --pending:#cfcfcf;
+    --ink:#111; --muted:#6b6b6b; --line:#d9d9d9; --bg:#fff; --on-ink:#fff;
+    --d-text:#1b73a5; --r-text:#e20000; --hatch:rgba(255,255,255,.55);
     --font:"BlickVariable","GT America",Arial,Helvetica,sans-serif;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --pending:#3d3d3d; --ink:#f2f2f2; --muted:#a0a0a0; --line:#3a3a3a; --bg:#111;
-      --d-text:#5fb6e0; --r-text:#ff6a52; color-scheme:dark;
+      --pending:#4a4a4a; --ink:#f2f2f2; --muted:#a0a0a0; --line:#333; --bg:#111; --on-ink:#111;
+      --d-text:#5fb6e0; --r-text:#ff4a4a; --hatch:rgba(17,17,17,.55); color-scheme:dark;
     }
   }
   :root[data-theme="dark"]{
-    --pending:#3d3d3d; --ink:#f2f2f2; --muted:#a0a0a0; --line:#3a3a3a; --bg:#111;
-    --d-text:#5fb6e0; --r-text:#ff6a52; color-scheme:dark;
+    --pending:#4a4a4a; --ink:#f2f2f2; --muted:#a0a0a0; --line:#333; --bg:#111; --on-ink:#111;
+    --d-text:#5fb6e0; --r-text:#ff4a4a; --hatch:rgba(17,17,17,.55); color-scheme:dark;
   }
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-text-size-adjust:100%}
-  .wrap{max-width:1100px;margin:0 auto;padding:18px 16px 16px}
+  .wrap{max-width:1100px;margin:0 auto;padding:14px 16px 16px}
 
-  .kicker{text-align:center;font-size:26px;font-weight:900;letter-spacing:-.01em;margin:0 0 18px}
-  .kicker .y2{color:var(--d-text)} .kicker .y6{color:var(--r-text)}
+  .kicker{font-size:24px;line-height:1.1;font-weight:800;letter-spacing:-.01em;margin:0 0 14px}
+  .kicker .live{display:inline-block;vertical-align:4px;margin-left:8px;font-size:11px;font-weight:800;letter-spacing:.04em;
+    color:#fff;background:#e20000;border-radius:3px;padding:2px 6px;text-transform:uppercase}
 
-  .cols{display:grid;grid-template-columns:1fr 1fr;gap:0}
-  .col{padding:0 32px;min-width:0}
-  .col:first-child{padding-left:0;border-right:1px solid var(--line)}
-  .col:last-child{padding-right:0}
-  .col h2{margin:0 0 14px;font-size:21px;font-weight:800;display:flex;align-items:center;gap:6px}
-  .col h2 a{color:inherit;text-decoration:none}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 32px}
+  .col{min-width:0;border-top:2px solid var(--ink);padding-top:10px}
+  .col h2{margin:0 0 8px;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.02em}
+  .col h2 a{color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
   .col h2 a:hover{text-decoration:underline}
-  .col h2 svg{width:14px;height:14px}
+  .col h2 svg{width:13px;height:13px}
 
-  .score{display:flex;justify-content:space-between;align-items:baseline;gap:8px;position:relative;margin-bottom:8px;font-size:17px}
-  .score b{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
-  .score .d b{color:var(--d-text);margin-left:4px} .score .r b{color:var(--r-text);margin-right:4px}
-  .score .maj{position:absolute;transform:translateX(-50%);font-size:12px;color:var(--muted);top:2px}
+  .gauge-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:6px}
+  .side{font-weight:800;line-height:1.05}
+  .side .n{font-size:36px;display:block;font-variant-numeric:tabular-nums}
+  .side .p{font-size:12px;font-weight:700;letter-spacing:.02em;text-transform:uppercase}
+  .side.d{color:var(--d-text)} .side.r{color:var(--r-text);text-align:right}
+  .mid{font-size:13px;color:var(--muted);text-align:center;padding-bottom:4px}
 
-  .bar{position:relative;display:flex;gap:6px;height:14px}
-  .bar span{height:100%;border-radius:3px;transition:flex-basis .5s ease}
+  .bar{position:relative;display:flex;height:22px;background:var(--pending);border-radius:3px;overflow:hidden}
+  .bar span{height:100%;transition:flex-basis .5s ease}
   .bar .seg-d{background:var(--d)} .bar .seg-r{background:var(--r)}
-  .bar .seg-p{background:var(--pending);flex:1 1 auto}
-  .bar .hd{background:repeating-linear-gradient(-55deg,var(--d) 0 4px,#1d1d1f 4px 7px)}
-  .bar .hr{background:repeating-linear-gradient(-55deg,var(--r) 0 4px,#1d1d1f 4px 7px)}
-  .bar .tick{position:absolute;top:-10px;bottom:-10px;width:2px;background:var(--ink);border-radius:0}
+  .bar .seg-p{flex:1 1 auto}
+  /* Sièges non renouvelés : couleur du parti, hachurée */
+  .bar .hd{background:repeating-linear-gradient(-55deg,var(--d) 0 5px,var(--hatch) 5px 7px),var(--d)}
+  .bar .hr{background:repeating-linear-gradient(-55deg,var(--r) 0 5px,var(--hatch) 5px 7px),var(--r)}
+  .bar .tick{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink)}
+  .gauge-foot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted);margin-top:6px}
+  .gauge-foot i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  .gauge-foot i.hatch{background:repeating-linear-gradient(-55deg,var(--muted) 0 3px,transparent 3px 5px);box-shadow:inset 0 0 0 1px var(--muted)}
+  .gauge-foot i.pend{background:var(--pending)}
 
-  .legend{margin-top:16px;display:grid;gap:8px;font-size:15px;color:var(--muted)}
-  .legend span{display:flex;align-items:center;gap:10px}
-  .legend i{width:15px;height:15px;border-radius:2px;flex:none;background:var(--pending)}
-  .legend i.hatch{background:repeating-linear-gradient(-55deg,var(--muted) 0 2px,transparent 2px 4px);box-shadow:inset 0 0 0 1px var(--muted)}
-
-  .foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px 16px;margin-top:22px}
-  .foot .meta{font-size:14px;color:var(--muted)}
+  .foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px 16px;margin-top:14px;
+    border-top:1px solid var(--line);padding-top:10px}
+  .foot .meta{font-size:12px;color:var(--muted)}
   .foot .meta a{color:inherit}
-  .btn{display:inline-flex;align-items:center;gap:10px;border:1.5px solid var(--ink);color:var(--ink);text-decoration:none;
-    font-weight:800;font-size:16px;padding:10px 20px;border-radius:999px;white-space:nowrap}
-  .btn:hover{background:var(--ink);color:var(--bg)}
-  .btn svg{width:18px;height:18px}
+  .btn{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:var(--on-ink);text-decoration:none;
+    font-weight:700;font-size:14px;padding:8px 16px;border-radius:999px;white-space:nowrap;border:2px solid var(--ink)}
+  .btn:hover{background:var(--bg);color:var(--ink)}
+  .btn svg{width:16px;height:16px}
 
   @media (max-width:700px){
-    .kicker{font-size:22px;margin-bottom:12px}
-    .cols{grid-template-columns:1fr;gap:18px}
-    .col,.col:first-child,.col:last-child{padding:0;border:0}
-    .col:first-child{padding-bottom:18px;border-bottom:1px solid var(--line)}
-    .col h2{font-size:19px;margin-bottom:10px}
-    .legend{margin-top:12px;font-size:14px}
-    .foot{margin-top:16px}
+    .kicker{font-size:20px;margin-bottom:10px}
+    .cols{grid-template-columns:1fr;gap:16px}
+    .side .n{font-size:30px}
     .btn{width:100%;justify-content:center}
   }
   @media (prefers-reduced-motion:reduce){ .bar span{transition:none} }
@@ -90,7 +89,7 @@
 </head>
 <body>
 <div class="wrap">
-  <p class="kicker">MIDTERMS <span class="y2">20</span><span class="y6">26</span></p>
+  <p class="kicker">Midterms 2026<span class="live">Live</span></p>
   <div class="cols">
     <section class="col" id="house"></section>
     <section class="col" id="senate"></section>
@@ -125,16 +124,18 @@
 
   var T = {
     fr: { house: "Chambre des représentants", senate: "Sénat", dem: "Démocrates", rep: "Républicains",
-      left: function(n){ return "Il reste " + n + " siège" + (n > 1 ? "s" : "") + " à pourvoir"; },
-      notUp: function(n){ return n + " sièges non renouvelés cette année"; },
-      updated: function(t){ return "Mis à jour à " + t.replace(":", " h ") + " - Source : "; },
-      loading: "Chargement des résultats… - Source : ",
+      left: function(n){ return n + " non attribué" + (n > 1 ? "s" : ""); },
+      notUp: function(n){ return n + " sièges non renouvelés"; },
+      updated: function(t){ return "Mis à jour à " + t + " · Source : "; },
+      loading: "Chargement des résultats… · Source : ",
+      majority: function(n){ return n + " pour la majorité"; },
       cta: "Voir tous les résultats" },
     de: { house: "Repräsentantenhaus", senate: "Senat", dem: "Demokraten", rep: "Republikaner",
-      left: function(n){ return "Noch " + n + " Sitz" + (n > 1 ? "e" : "") + " offen"; },
-      notUp: function(n){ return n + " Sitze stehen dieses Jahr nicht zur Wahl"; },
-      updated: function(t){ return "Aktualisiert um " + t + " Uhr - Quelle: "; },
-      loading: "Resultate werden geladen… - Quelle: ",
+      left: function(n){ return n + " noch offen"; },
+      notUp: function(n){ return n + " Sitze nicht zur Wahl"; },
+      updated: function(t){ return "Aktualisiert um " + t + " · Quelle: "; },
+      loading: "Resultate werden geladen… · Quelle: ",
+      majority: function(n){ return n + " für die Mehrheit"; },
       cta: "Alle Resultate" }
   }[LANG];
 
@@ -161,21 +162,21 @@
     var dTot = c.D + (hold ? hold.D : 0), rTot = c.R + (hold ? hold.R : 0);
     var n = c.n || (hold ? 35 : 435);   // avant le premier chargement : nombre de sièges en jeu
     var left = n - c.D - c.R - c.O;
-    var seg = function(cls, n){ return n > 0 ? '<span class="' + cls + '" style="flex:0 0 ' + pct(n) + '"></span>' : ""; };
-    var html =
-      '<h2><a href="' + URL_ARTICLE + '" target="_top">' + title + "</a>" + CHEV + "</h2>" +
-      '<div class="score"><span class="d">' + T.dem + "<b>" + dTot + "</b></span>" +
-        '<span class="maj" style="left:' + pct(majority) + '">' + majority + "</span>" +
-        '<span class="r"><b>' + rTot + "</b>" + T.rep + "</span></div>" +
+    var seg = function(cls, k){ return k > 0 ? '<span class="' + cls + '" style="flex:0 0 ' + pct(k) + '"></span>' : ""; };
+    $(id).innerHTML =
+      '<h2><a href="' + URL_ARTICLE + '" target="_top">' + title + CHEV + "</a></h2>" +
+      '<div class="gauge-head">' +
+        '<div class="side d"><span class="n">' + dTot + '</span><span class="p">' + T.dem + "</span></div>" +
+        '<div class="mid">' + T.majority(majority) + "</div>" +
+        '<div class="side r"><span class="n">' + rTot + '</span><span class="p">' + T.rep + "</span></div>" +
+      "</div>" +
       '<div class="bar">' +
-        (hold ? seg("hd", hold.D) : "") + seg("seg-d", c.D) +
-        '<span class="seg-p"></span>' +
+        (hold ? seg("hd", hold.D) : "") + seg("seg-d", c.D) + '<span class="seg-p"></span>' +
         seg("seg-r", c.R) + (hold ? seg("hr", hold.R) : "") +
         '<span class="tick" style="left:calc(' + pct(majority) + ' - 1px)"></span>' +
       "</div>" +
-      '<div class="legend"><span><i></i>' + T.left(left) + "</span>" +
+      '<div class="gauge-foot"><span><i class="pend"></i>' + T.left(left) + "</span>" +
         (hold ? '<span><i class="hatch"></i>' + T.notUp(hold.D + hold.R) + "</span>" : "") + "</div>";
-    $(id).innerHTML = html;
   }
 
   function hhmm(ts){ return new Date(ts).toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Zurich" }); }
