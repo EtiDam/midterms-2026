@@ -121,15 +121,13 @@
 
   /* Carte */
   .map{margin:14px 0 4px}
-  .map svg{display:block;width:100%;height:auto;overflow:visible}
-  .hex{cursor:pointer;fill:var(--pending);stroke:var(--bg);stroke-width:5;transition:fill .4s ease}
+  .map svg{display:block;width:100%;height:auto;overflow:visible;transform:translateZ(0)}
+  .hex{cursor:pointer;fill:var(--pending);stroke:var(--bg);stroke-width:5}
   .hex:focus,.st:focus{outline:none}
   /* Chargement : les hexagones « respirent » doucement au lieu de rester figés */
   @keyframes breathe{0%,100%{opacity:1}50%{opacity:.45}}
-  .map.loading .hex{animation:breathe 1.2s ease-in-out infinite}
-  .map.loading .st:nth-child(3n) .hex{animation-delay:.2s}
-  .map.loading .st:nth-child(3n+1) .hex{animation-delay:.4s}
-  @media (prefers-reduced-motion:reduce){ .map.loading .hex{animation:none;opacity:.6} }
+  .map.loading svg{animation:breathe 1.2s ease-in-out infinite}
+  @media (prefers-reduced-motion:reduce){ .map.loading svg{animation:none;opacity:.6} }
   .outline{fill:none;stroke:var(--bg);stroke-width:5;pointer-events:none}
   .st.sel .outline,.st:focus-visible .outline{stroke:var(--ink);stroke-width:8}
   .stripes{pointer-events:none}
@@ -363,7 +361,7 @@
   var FETCH_TIMEOUT_MS = 20000;   // on abandonne une requête au-delà de 20 s
   var RETRY_MS = 15000;           // en cas d'échec, nouvel essai après 15 s
   var KEEP = { "US Senate": 1, "House of Representatives": 1, "Governor": 1 };
-  var mem = {};                    // { General: {races, at}, Statewide: {races, at} }
+  var mem = {}, lastSaved = {};                    // { General: {races, at}, Statewide: {races, at} }
 
   function slim(races){
     // On ne garde que ce dont la carte a besoin (allège le stockage local)
@@ -380,7 +378,10 @@
   }
   function writeCache(t, races){
     var v = { races: races, at: Date.now() }; mem[t] = v;
-    try { localStorage.setItem(storeKey(t), JSON.stringify(v)); } catch(e){}
+    var json = JSON.stringify(v.races);
+    if (lastSaved[t] === json) { return; }
+    lastSaved[t] = json;
+    setTimeout(function(){ try { localStorage.setItem(storeKey(t), JSON.stringify(v)); } catch(e){} }, 1500);
   }
 
   function fetchType(electionType){
@@ -508,7 +509,7 @@
       var fill = s.status === "def" ? COLORS[s.party].def
                : s.status === "prov" ? COLORS[s.party].prov
                : s.status === "pending" ? "var(--pending)" : "var(--norace)";
-      hex.style.fill = fill;
+      if (hex._fill !== fill) { hex.style.fill = fill; hex._fill = fill; }
       g.classList.toggle("none", s.status === "none");
       lab.setAttribute("class", "lab" + (s.status === "pending" && !s.house ? " dark" : s.status === "none" ? " faint" : ""));
       drawStripes(g, s.house);
@@ -520,6 +521,9 @@
   function drawStripes(g, h){
     var box = g.querySelector(".stripes"), nb = g.querySelector(".num"), lab = g.querySelector(".lab"), t = g._tile;
     g.classList.toggle("house", !!h);
+    var sig = h ? [h.D, h.Dp, h.O, h.R, h.Rp, h.total].join(",") : "";
+    if (g._sig === sig) return;   // rien de changé : pas de redessin
+    g._sig = sig;
     box.innerHTML = ""; nb.textContent = "";
     lab.setAttribute("y", h ? t.y - 8 : t.y);
     if (!h) return;
@@ -698,7 +702,7 @@
     lastStates = {};
     document.querySelectorAll(".st").forEach(function(g){
       g.classList.remove("none");
-      g.querySelector(".hex").style.fill = "";
+      var hx = g.querySelector(".hex"); hx.style.fill = ""; hx._fill = "";
       g.querySelector(".lab").setAttribute("class", "lab dark");
       drawStripes(g, null);
     });
