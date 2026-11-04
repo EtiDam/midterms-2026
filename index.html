@@ -55,7 +55,7 @@
     --o:#8a8a8a; --o-prov:#c5c5c5;
     --pending:#d6d6d6; --norace:#fff; --norace-line:#c9c9c9;
     --ink:#111; --muted:#666; --line:#ddd; --bg:#f6f5f3; --brand:#e20000; --tab-bg:#fff;
-    --on-ink:#fff; --track:#eee; --lab-pending:#4a4a4a; --lab-faint:#c9c9c9; --d-text:#1b73a5; --r-text:#e20000;
+    --on-ink:#fff; --track:#eee; --lab-pending:#4a4a4a; --lab-faint:#c9c9c9; --d-text:#1b73a5; --r-text:#e20000; --hatch:rgba(255,255,255,.55);
     --font:"BlickVariable","GT America",Arial,Helvetica,sans-serif;
   }
   /* Thème sombre : suit l'appareil du lecteur, ou forcé avec ?theme=dark / ?theme=light */
@@ -64,14 +64,14 @@
       --pending:#4a4a4a; --norace:transparent; --norace-line:#555;
       --ink:#f2f2f2; --muted:#a0a0a0; --line:#333; --bg:#111; --tab-bg:#111;
       --on-ink:#111; --track:#2a2a2a; --lab-pending:#e6e6e6; --lab-faint:#666;
-      --o:#9a9a9a; --d-text:#5fb6e0; --r-text:#ff4a4a; color-scheme:dark;
+      --o:#9a9a9a; --d-text:#5fb6e0; --r-text:#ff4a4a; --hatch:rgba(17,17,17,.55); color-scheme:dark;
     }
   }
   :root[data-theme="dark"]{
     --pending:#4a4a4a; --norace:transparent; --norace-line:#555;
     --ink:#f2f2f2; --muted:#a0a0a0; --line:#333; --bg:#111; --tab-bg:#111;
     --on-ink:#111; --track:#2a2a2a; --lab-pending:#e6e6e6; --lab-faint:#666;
-    --o:#9a9a9a; --d-text:#5fb6e0; --r-text:#ff4a4a; color-scheme:dark;
+    --o:#9a9a9a; --d-text:#5fb6e0; --r-text:#ff4a4a; --hatch:rgba(17,17,17,.55); color-scheme:dark;
   }
   *{box-sizing:border-box}
   html.bg-transparent,html.bg-transparent body{background:transparent}
@@ -115,6 +115,11 @@
   .bar .sp{flex:1}
   .bar .srp{background:var(--r-prov)} .bar .sr{background:var(--r)}
   .bar .so{background:var(--o)}
+  /* Sénat : sièges non renouvelés, couleur du parti hachurée (comme le bandeau home) */
+  .bar .hd{background:repeating-linear-gradient(-55deg,var(--d) 0 5px,var(--hatch) 5px 7px),var(--d)}
+  .bar .hr{background:repeating-linear-gradient(-55deg,var(--r) 0 5px,var(--hatch) 5px 7px),var(--r)}
+  .gauge-foot i.hatch{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px;
+    background:repeating-linear-gradient(-55deg,var(--muted) 0 3px,transparent 3px 5px);box-shadow:inset 0 0 0 1px var(--muted)}
   .bar .maj{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink)}
   #gauge{min-height:112px}
   .gauge-foot{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:6px;gap:8px}
@@ -235,7 +240,7 @@
       seats: "sièges", races: "élections",
       majority: function(n){ return n + " pour la majorité"; },
       undecided: function(n){ return n + " non attribués"; },
-      notUp: function(d,r){ return "Dont non renouvelés : " + d + " D, " + r + " R"; },
+      notUp: function(n){ return n + " sièges non renouvelés"; },
       leading: function(d,r,u){ return "En tête : " + d + " D, " + r + " R"; },
       govTotal: function(n){ return n + " postes de gouverneur en jeu"; },
       legend: { def: "Élu", prov: "En tête", pending: "Pas encore de résultat", none: "Pas d'élection en 2026" },
@@ -264,7 +269,7 @@
       seats: "Sitze", races: "Wahlen",
       majority: function(n){ return n + " für die Mehrheit"; },
       undecided: function(n){ return n + " noch offen"; },
-      notUp: function(d,r){ return "Davon nicht zur Wahl: " + d + " D, " + r + " R"; },
+      notUp: function(n){ return n + " Sitze nicht zur Wahl"; },
       leading: function(d,r,u){ return "Führend: " + d + " D, " + r + " R"; },
       govTotal: function(n){ return n + " Gouverneursposten zur Wahl"; },
       legend: { def: "Gewählt", prov: "Führt", pending: "Noch kein Resultat", none: "Keine Wahl 2026" },
@@ -605,15 +610,17 @@
         '<div class="side r"><span class="n">' + c.R + '</span><span class="p">' + T.rep + "</span></div>" +
       "</div>" +
       '<div class="bar" role="img" aria-label="' + T.dem + " " + c.D + ", " + T.rep + " " + c.R + '">' +
-        '<span class="sd" style="width:' + pct(c.D) + '"></span>' +
+        (holdover ? '<span class="hd" style="width:' + pct(holdover.D) + '"></span>' : "") +
+        '<span class="sd" style="width:' + pct(c.D - (holdover ? holdover.D : 0)) + '"></span>' +
         '<span class="sdp" style="width:' + pct(c.Dp) + '"></span>' +
         '<span class="sp"></span>' +
         (c.O ? '<span class="so" style="width:' + pct(c.O) + '"></span>' : "") +
         '<span class="srp" style="width:' + pct(c.Rp) + '"></span>' +
-        '<span class="sr" style="width:' + pct(c.R) + '"></span>' +
+        '<span class="sr" style="width:' + pct(c.R - (holdover ? holdover.R : 0)) + '"></span>' +
+        (holdover ? '<span class="hr" style="width:' + pct(holdover.R) + '"></span>' : "") +
         (majority ? '<span class="maj" style="left:calc(' + pct(majority - .5) + ' - 1px)"></span>' : "") +
       "</div>" +
-      '<div class="gauge-foot"><span>' + (holdover ? T.notUp(holdover.D, holdover.R) : T.leading(c.Dp, c.Rp, unit)) + "</span>" +
+      '<div class="gauge-foot"><span>' + (holdover ? '<i class="hatch"></i>' + T.notUp(holdover.D + holdover.R) : T.leading(c.Dp, c.Rp, unit)) + "</span>" +
         "<span>" + (c.O ? T.oth + " " + c.O + " · " : "") + T.undecided(undecided) + "</span></div>";
     $("gauge").innerHTML = html;
   }
@@ -653,7 +660,7 @@
       });
       if (RACE === "senate") {
         c.D += SENATE_HOLDOVER.D; c.R += SENATE_HOLDOVER.R;
-        renderGauge(c, 100, 51, SENATE_HOLDOVER);
+        renderGauge(c, 100, 50, SENATE_HOLDOVER);
       } else {
         renderGauge(c, races.length, null, null);
       }
